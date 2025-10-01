@@ -9,6 +9,7 @@ import React, {
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { useQuery } from "@tanstack/react-query";
+import { ENV } from "../config/env";
 
 const styles = `
   .circular-countdown {
@@ -92,7 +93,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     enabled: !!accessToken && isValidOutletId,
     refetchInterval: false,
     queryFn: async () => {
-      const response = await fetch("https://men4u.xyz/v2/common/cds_kds_order_listview", {
+      const response = await fetch(`${ENV.V2_COMMON_BASE}/cds_kds_order_listview`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -168,7 +169,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         app_source: "kds_app",
       };
 
-      const response = await fetch("https://men4u.xyz/v2/common/update_order_status", {
+      const response = await fetch(`${ENV.V2_COMMON_BASE}/update_order_status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -255,7 +256,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     const refreshToken = localStorage.getItem("refresh_token");
     if (!refreshToken) return false;
     try {
-      const response = await fetch("https://men4u.xyz/common_api/token/refresh", {
+      const response = await fetch(`${ENV.COMMON_API_BASE}/token/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh: refreshToken }),
@@ -368,7 +369,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         return;
       }
       try {
-        const response = await fetch("https://men4u.xyz/v2/common/update_order_status", {
+        const response = await fetch(`${ENV.V2_COMMON_BASE}/update_order_status`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",

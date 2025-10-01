@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import OutletDropdown from "./OutletDropdown";
 import SubscriptionRemainDay from "./SubscriptionRemainDay";
+import { ENV } from "../config/env";
 
 function Header({
   filter,
@@ -55,7 +56,7 @@ function Header({
         app_source: "kds_app"
       };
 
-      await fetch("https://men4u.xyz/v2/common/logout", {
+      await fetch(`${ENV.V2_COMMON_BASE}/logout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(logoutData),
