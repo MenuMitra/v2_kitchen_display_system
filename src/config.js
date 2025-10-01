@@ -1,5 +1,30 @@
-// Base API URL
-export const API_URL = "https://api.menumitra.com"; // Replace with your actual API URL
+// SINGLE SWITCH: change this to 'production' | 'testing' | 'development'
+const CURRENT_ENV = 'development';
+
+// Host configuration per environment
+const CONFIG = {
+  production: {
+    API_HOST: 'https://ghanish.in',
+    WS_URL: 'wss://ghanish.in/ws/database-updates',
+  },
+  testing: {
+    API_HOST: 'https://men4u.xyz',
+    WS_URL: 'wss://men4u.xyz/ws/database-updates',
+  },
+  development: {
+    API_HOST: 'https://men4u.xyz',
+    WS_URL: 'wss://men4u.xyz/ws/database-updates',
+  },
+};
+
+const { API_HOST, WS_URL } = CONFIG[CURRENT_ENV] || CONFIG.production;
+
+// Common base paths used across the app
+export const V2_COMMON_BASE = `${API_HOST}/v2/common`;
+export const COMMON_API_BASE = `${API_HOST}/common_api`;
+
+// Base API URL (alias for convenience)
+export const API_URL = V2_COMMON_BASE;
 
 // Firebase Config
 export const FIREBASE_CONFIG = {
