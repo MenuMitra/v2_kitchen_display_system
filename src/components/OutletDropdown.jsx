@@ -133,7 +133,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     <div
       ref={dropdownRef}
       className="relative inline-block min-w-[220px]"
-      style={{ position: "relative", borderRadius: "3px", width: "180px" }}
+      style={{ position: "relative", borderRadius: "3px", minWidth: "180px" }}
     >
       <button
         type="button"
