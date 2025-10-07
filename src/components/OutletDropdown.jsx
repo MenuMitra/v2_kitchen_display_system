@@ -134,7 +134,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     <div
       ref={dropdownRef}
       className="relative inline-block min-w-[220px]"
-      style={{ position: "relative", borderRadius: "3px", width: "180px" }}
+      style={{ position: "relative", borderRadius: "3px", minWidth: "180px" }}
     >
       <button
         type="button"
@@ -234,7 +234,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
                     style={{ borderRadius: 8 }}
                   >
                     <div className="d-flex align-items-center">
-                      <p className="text-capitalize m-0 p-0">{outlet.name}</p>
+                      <p className="text-capitalize m-0 p-0 text-wrap">{outlet.name}</p>
                       {outlet.outlet_code && (
                         <span className="text-xs text-secondary ms-1">({outlet.outlet_code})</span>
                       )}

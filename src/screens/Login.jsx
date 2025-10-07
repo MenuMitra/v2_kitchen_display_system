@@ -16,13 +16,20 @@ function Login() {
   const navigate = useNavigate();
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
+  // Redirect to orders if already logged in (run once on mount)
   useEffect(() => {
-    let timer;
-    if (resendCooldown > 0) {
-      timer = setInterval(() => {
-        setResendCooldown((prev) => prev - 1);
-      }, 1000);
+    const jwtToken = localStorage.getItem("access_token");
+    if (jwtToken) {
+      navigate("/orders");
     }
+  }, [navigate]);
+
+  // Handle resend OTP cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
@@ -171,12 +178,6 @@ function Login() {
             </div>
             <div>
               <form id="formAuthentication" className="mb-3 form-container-login fv-plugins-bootstrap5 fv-plugins-framework" onSubmit={showOtpInput ? handleVerifyOTP : handleSendOTP} noValidate="novalidate">
-                <div className="d-flex justify-content-center">
-                  <div className="mr-3 ml-3" style={{width: "60%"}}>
-                    {error && <div className="alert alert-danger mr-3 ml-3 text-center" role="alert">{error}</div>}
-                  </div>
-                </div>
-
                 {!showOtpInput ? (
                   <div className="form-floating form-floating-outline mb-3 form-control-validation fv-plugins-icon-container mr-4 ml-4">
                     <div>
@@ -184,7 +185,7 @@ function Login() {
                     </div>
                     <input
                       type="text"
-                      className="form-control-login-form mt-2 mb-2"
+                      className="form-control-login-form mt-2"
                       id="mobile"
                       name="mobile"
                       placeholder="Enter your mobile number"
@@ -192,7 +193,7 @@ function Login() {
                       onChange={(e) => {
                         const input = e.target.value.replace(/\D/g, "").slice(0, 10);
                         if (/^[0-5]/.test(input)) {
-                          setError("Mobile number cannot start with digits between 0 and 5.");
+                          setError("Mobile number must start with 6-9");
                           return;
                         } else {
                           setError("");
@@ -201,6 +202,9 @@ function Login() {
                       }}
                       autoFocus
                     />
+                    
+                    {error && <p className="text-danger" role="alert">{error}</p>}
+                    
                   </div>
                 ) : (
                   <>
@@ -229,7 +233,7 @@ function Login() {
                         type="button"
                         onClick={handleResendOTP}
                         disabled={resendCooldown > 0}
-                        className="text-base font-medium focus:outline-none focus:underline mb-3 "
+                        className="text-base font-medium focus:outline-none focus:underline mb-3 mt-2"
                         style={{
                           background: 'none',
                           border: 'none',
