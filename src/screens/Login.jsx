@@ -15,20 +15,20 @@ function Login() {
   const navigate = useNavigate();
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
+  // Redirect to orders if already logged in (run once on mount)
   useEffect(() => {
-
-    const jwtToken = localStorage.getItem("access_token")
-
-    if (jwtToken){
-      navigate("/orders")
+    const jwtToken = localStorage.getItem("access_token");
+    if (jwtToken) {
+      navigate("/orders");
     }
+  }, [navigate]);
 
-    let timer;
-    if (resendCooldown > 0) {
-      timer = setInterval(() => {
-        setResendCooldown((prev) => prev - 1);
-      }, 1000);
-    }
+  // Handle resend OTP cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
     return () => clearInterval(timer);
   }, [resendCooldown]);
 

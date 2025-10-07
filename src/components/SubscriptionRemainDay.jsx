@@ -139,7 +139,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
   const progressPercentage = (daysCompleted / totalDays) * 100;
   const remainingPercentage = (daysRemaining / totalDays) * 100;
 
-  return (
+  return daysRemaining <= 5 ? (
     <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: '10px' }}>
       <div style={{
         background: '#fff',
@@ -159,41 +159,41 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
           }}>
             Timeline
           </div>
-           <div style={{ width: '100%', marginBottom: '6px' }}>
-             <div style={{
-               height: '16px',
-               borderRadius: '8px',
-               background: '#e4e6ea',
-               position: 'relative',
-               overflow: 'hidden',
-               width: '100%',
-             }}>
-               <div style={{
-                 position: 'absolute',
-                 top: 0,
-                 left: 0,
-                 height: '100%',
-                 width: '100%',
-                 background: `linear-gradient(to right, ${getProgressColor(daysRemaining)} ${100 - progressPercentage}%, #E0E0E0 ${100 - progressPercentage}%)`,
-                 borderRadius: '8px',
-                 transition: 'all 0.3s',
-                 zIndex: 1,
-               }} />
-             </div>
-           </div>
-           <div style={{
-             display: 'flex',
-             justifyContent: 'space-between',
-             fontSize: '0.75rem',
-             margin: '0 2px'
-           }}>
-             <span style={{ color: '#374151', fontWeight: '500' }}>{daysCompleted} days completed</span>
-             <span style={{ color: '#374151', fontWeight: '500' }}>{daysRemaining} days remaining</span>
-           </div>
+          <div style={{ width: '100%', marginBottom: '6px' }}>
+            <div style={{
+              height: '16px',
+              borderRadius: '8px',
+              background: '#e4e6ea',
+              position: 'relative',
+              overflow: 'hidden',
+              width: '100%',
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                height: '100%',
+                width: '100%',
+                background: `linear-gradient(to right, ${getProgressColor(daysRemaining)} ${100 - progressPercentage}%, #E0E0E0 ${100 - progressPercentage}%)`,
+                borderRadius: '8px',
+                transition: 'all 0.3s',
+                zIndex: 1,
+              }} />
+            </div>
+          </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: '0.75rem',
+            margin: '0 2px'
+          }}>
+            <span style={{ color: '#374151', fontWeight: '500' }}>{daysCompleted} days completed</span>
+            <span style={{ color: '#374151', fontWeight: '500' }}>{daysRemaining} days remaining</span>
+          </div>
         </div>
       </div>
     </div>
-  );
+  ) : null;
 };
 
 export default SubscriptionRemainDay;

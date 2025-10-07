@@ -246,7 +246,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         console.log('Periodic refresh triggered...');
         refetch();
       }
-    }, 30000); // Refresh every 30 seconds
+    }, 2000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
   }, [isFetching, queryLoading, refetch]);
