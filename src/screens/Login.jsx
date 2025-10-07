@@ -16,6 +16,13 @@ function Login() {
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
   useEffect(() => {
+
+    const jwtToken = localStorage.getItem("access_token")
+
+    if (jwtToken){
+      navigate("/orders")
+    }
+
     let timer;
     if (resendCooldown > 0) {
       timer = setInterval(() => {
