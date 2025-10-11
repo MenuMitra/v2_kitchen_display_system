@@ -47,6 +47,7 @@ function Login() {
         mobile: mobileNumber,
         role: ["admin", "chef", "super_owner"],
         app_type: "kds",
+        version: APP_INFO.version,
       });
 
       if (response.data.detail && response.data.detail.includes("successfully")) {
@@ -72,6 +73,7 @@ function Login() {
         mobile: mobileNumber,
         role: ["admin", "chef", "super_owner"],
         app_type: "kds",
+        version: APP_INFO.version,
       });
 
       if (response.data.detail && response.data.detail.includes("successfully")) {
@@ -132,6 +134,7 @@ function Login() {
         device_id: deviceSessId,
         device_model: "web",
         app_type: "kds",
+        version: APP_INFO.version,
       });
 
       if (response.data && response.data.access_token) {

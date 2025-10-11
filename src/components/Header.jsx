@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import OutletDropdown from "./OutletDropdown";
 import SubscriptionRemainDay from "./SubscriptionRemainDay";
+import { CURRENT_ENV } from "../config";
 
 function Header({
   filter,
@@ -110,7 +111,7 @@ function Header({
 
   return (
     <>
-      {!isFullscreen && (
+      {!isFullscreen && CURRENT_ENV !== 'production' && (
         <div
           style={{
             width: "100%",
