@@ -20,7 +20,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
   }
 
   const fetchSubscriptionData = async ({ queryKey }) => {
-    const [_key, outletId, currentDateRange] = queryKey;
+    const [, outletId, currentDateRange] = queryKey;
     if (!outletId || !token) return null;
     try {
       const requestPayload = {
@@ -69,13 +69,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
     }
   }, [propSubscriptionData, subscriptionFromQuery, isLoading, queryError]);
 
-  const calculateDaysRemaining = (endDate) => {
-    const today = new Date();
-    const end = new Date(endDate);
-    const diffTime = end - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  };
+  // Removed today-based calculations; rely only on start_date, end_date, and optional status
 
   const calculateTotalDays = (startDate, endDate) => {
     const start = new Date(startDate);
@@ -129,15 +123,16 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
   let daysRemaining;
 
   if (typeof subscriptionData.status === 'number' && !Number.isNaN(subscriptionData.status)) {
-    daysCompleted = Math.max(0, Math.min(totalDays, subscriptionData.status));
-    daysRemaining = Math.max(0, totalDays - daysCompleted);
-  } else {
-    daysRemaining = calculateDaysRemaining(subscriptionData.end_date);
+    // Treat status as remaining days per requirement (no today-based calc)
+    daysRemaining = Math.max(0, Math.min(totalDays, subscriptionData.status));
     daysCompleted = Math.max(0, totalDays - daysRemaining);
+  } else {
+    // If no status provided, default to all days remaining
+    daysRemaining = totalDays;
+    daysCompleted = 0;
   }
 
   const progressPercentage = (daysCompleted / totalDays) * 100;
-  const remainingPercentage = (daysRemaining / totalDays) * 100;
 
   return daysRemaining <= 5 ? (
     <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: '10px' }}>
@@ -173,8 +168,8 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
                 top: 0,
                 left: 0,
                 height: '100%',
-                width: '100%',
-                background: `linear-gradient(to right, ${getProgressColor(daysRemaining)} ${100 - progressPercentage}%, #E0E0E0 ${100 - progressPercentage}%)`,
+                width: `${progressPercentage}%`,
+                background: getProgressColor(daysRemaining),
                 borderRadius: '8px',
                 transition: 'all 0.3s',
                 zIndex: 1,
