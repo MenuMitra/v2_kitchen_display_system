@@ -16,6 +16,8 @@ function Header({
   const [localFilter, setLocalFilter] = useState(filter || "today");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isTodayHover, setIsTodayHover] = useState(false);
+  const [isAllHover, setIsAllHover] = useState(false);
 
   const userId = localStorage.getItem("user_id");
   const navigate = useNavigate();
@@ -100,7 +102,7 @@ function Header({
 
   const nonActiveBtnStyle = {
     ...toggleBtnStyle,
-    background: "#fff",
+    backgroundColor: "#fff",
     color: "#1673ff",
   };
 
@@ -164,21 +166,31 @@ function Header({
                 <div className="custom-toggle-group">
                   <button
                     type="button"
-                    style={localFilter === "today" ? activeBtnStyle : nonActiveBtnStyle}
+                    style={{
+                      ...(localFilter === "today" ? activeBtnStyle : nonActiveBtnStyle),
+                      ...(localFilter !== "today" && isTodayHover ? { backgroundColor: "#e9ecef" } : {}),
+                    }}
+                    onMouseEnter={() => setIsTodayHover(true)}
+                    onMouseLeave={() => setIsTodayHover(false)}
                     onClick={() => changeFilter("today")}
                   >
                     Today
                   </button>
                   <button
                     type="button"
-                    style={localFilter === "all" ? activeBtnStyle : nonActiveBtnStyle}
+                    style={{
+                      ...(localFilter === "all" ? activeBtnStyle : nonActiveBtnStyle),
+                      ...(localFilter !== "all" && isAllHover ? { backgroundColor: "#e9ecef" } : {}),
+                    }}
+                    onMouseEnter={() => setIsAllHover(true)}
+                    onMouseLeave={() => setIsAllHover(false)}
                     onClick={() => changeFilter("all")}
                   >
                     All
                   </button>
                 </div>
                 <button
-                  className="header-icons-items refresh-btn-heder"
+                  className="header-icons-items btn btn-outline-secondary refresh-btn-heder"
                   title="Refresh"
                   onClick={() => onRefresh?.()}
                 >
