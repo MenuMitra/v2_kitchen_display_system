@@ -16,13 +16,6 @@ function Login() {
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
   // Redirect to orders if already logged in (run once on mount)
-  useEffect(() => {
-    const jwtToken = localStorage.getItem("access_token");
-    if (jwtToken) {
-      navigate("/orders");
-    }
-  }, [navigate]);
-
   // Handle resend OTP cooldown timer
   useEffect(() => {
     if (resendCooldown <= 0) return;
