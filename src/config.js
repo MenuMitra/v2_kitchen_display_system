@@ -1,5 +1,5 @@
 // SINGLE SWITCH: change this to 'production' | 'testing' | 'development'
-const CURRENT_ENV = 'production';
+export const CURRENT_ENV = 'production';
 
 // Host configuration per environment
 const CONFIG = {
@@ -17,7 +17,7 @@ const CONFIG = {
   },
 };
 
-const { API_HOST, WS_URL } = CONFIG[CURRENT_ENV] || CONFIG.production;
+const { API_HOST, WS_URL } = CONFIG[CURRENT_ENV] || CONFIG.development;
 
 // Common base paths used across the app
 export const V2_COMMON_BASE = `${API_HOST}/v2/common`;
@@ -45,7 +45,7 @@ export const VAPID_KEY = "BGsWfw7acs_yXMa_bcWfw-49_MQkV8MdSOrCih9OO-v9pQ7AvKA2ni
 // add at the bottom (or export from wherever you prefer)
 export const APP_INFO = {
   name: "MenuMitra",
-  version: "2.0",
-  releaseDate: "23 Sept 2025",
+  version: "2.1.1",
+  releaseDate: "7 sept 2025",
 };
 

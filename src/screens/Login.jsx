@@ -17,13 +17,6 @@ function Login() {
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
   // Redirect to orders if already logged in (run once on mount)
-  useEffect(() => {
-    const jwtToken = localStorage.getItem("access_token");
-    if (jwtToken) {
-      navigate("/orders");
-    }
-  }, [navigate]);
-
   // Handle resend OTP cooldown timer
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -48,6 +41,7 @@ function Login() {
         mobile: mobileNumber,
         role: ["admin", "chef", "super_owner"],
         app_type: "kds",
+        version: APP_INFO.version,
       });
 
       if (response.data.detail && response.data.detail.includes("successfully")) {
@@ -73,6 +67,7 @@ function Login() {
         mobile: mobileNumber,
         role: ["admin", "chef", "super_owner"],
         app_type: "kds",
+        version: APP_INFO.version,
       });
 
       if (response.data.detail && response.data.detail.includes("successfully")) {
@@ -133,6 +128,7 @@ function Login() {
         device_id: deviceSessId,
         device_model: "web",
         app_type: "kds",
+        version: APP_INFO.version,
       });
 
       if (response.data && response.data.access_token) {

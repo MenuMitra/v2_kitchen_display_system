@@ -21,7 +21,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
   }
 
   const fetchSubscriptionData = async ({ queryKey }) => {
-    const [_key, outletId, currentDateRange] = queryKey;
+    const [, outletId, currentDateRange] = queryKey;
     if (!outletId || !token) return null;
     try {
       const requestPayload = {
@@ -70,13 +70,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
     }
   }, [propSubscriptionData, subscriptionFromQuery, isLoading, queryError]);
 
-  const calculateDaysRemaining = (endDate) => {
-    const today = new Date();
-    const end = new Date(endDate);
-    const diffTime = end - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  };
+  // Removed today-based calculations; rely only on start_date, end_date, and optional status
 
   const calculateTotalDays = (startDate, endDate) => {
     const start = new Date(startDate);
@@ -86,13 +80,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
     return Math.max(1, diffDays);
   };
 
-  const getProgressColor = (daysRemaining) => {
-    if (daysRemaining > 30) return '#10B981'; // green
-    if (daysRemaining < 5) return '#ef4444'; // red
-    if (daysRemaining < 15) return '#f59e0b'; // orange
-    if (daysRemaining < 30) return '#eab308'; // yellow
-    return '#10B981';
-  };
+  // Color and status derived from remaining days
 
   // Hide timeline until outlet is selected
   if (!selectedOutlet || !selectedOutlet.outlet_id) {
@@ -126,21 +114,25 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
   }
 
   const totalDays = calculateTotalDays(subscriptionData.start_date, subscriptionData.end_date);
-  let daysCompleted;
-  let daysRemaining;
+  // startDate currently not used in UI; keep if needed later
+  // const startDate = new Date(subscriptionData.start_date);
+  const endDate = new Date(subscriptionData.end_date);
+  const currentDate = new Date();
 
-  if (typeof subscriptionData.status === 'number' && !Number.isNaN(subscriptionData.status)) {
-    daysCompleted = Math.max(0, Math.min(totalDays, subscriptionData.status));
-    daysRemaining = Math.max(0, totalDays - daysCompleted);
-  } else {
-    daysRemaining = calculateDaysRemaining(subscriptionData.end_date);
-    daysCompleted = Math.max(0, totalDays - daysRemaining);
+  const remainingDaysRaw = Math.ceil((endDate - currentDate) / (1000 * 60 * 60 * 24));
+  const remainingDays = Math.max(0, remainingDaysRaw );
+  const completedDays = Math.max(0, totalDays - remainingDays);
+
+  const percentage = totalDays > 0 ? (completedDays / totalDays) * 100 : 0;
+
+  let color = '#177841';
+  if (remainingDays <= 5) {
+    color = '#d10606';
+  } else if (remainingDays <= 15) {
+    color = '#F59E0B';
   }
 
-  const progressPercentage = (daysCompleted / totalDays) * 100;
-  const remainingPercentage = (daysRemaining / totalDays) * 100;
-
-  return daysRemaining <= 5 ? (
+  return remainingDays <= 5 ? (
     <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: '10px' }}>
       <div style={{
         background: '#fff',
@@ -174,8 +166,8 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
                 top: 0,
                 left: 0,
                 height: '100%',
-                width: '100%',
-                background: `linear-gradient(to right, ${getProgressColor(daysRemaining)} ${100 - progressPercentage}%, #E0E0E0 ${100 - progressPercentage}%)`,
+                width: `${percentage}%`,
+                background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
                 borderRadius: '8px',
                 transition: 'all 0.3s',
                 zIndex: 1,
@@ -188,8 +180,8 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
             fontSize: '0.75rem',
             margin: '0 2px'
           }}>
-            <span style={{ color: '#374151', fontWeight: '500' }}>{daysCompleted} days completed</span>
-            <span style={{ color: '#374151', fontWeight: '500' }}>{daysRemaining} days remaining</span>
+            <span style={{ color: '#374151', fontWeight: '500' }}>{completedDays} days completed</span>
+            <span style={{ color: remainingDays <= 5 ? '#ef4444' : '#374151', fontWeight: '500' }}>{remainingDays} days remaining</span>
           </div>
         </div>
       </div>
