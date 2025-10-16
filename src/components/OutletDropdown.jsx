@@ -203,7 +203,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       {show && (
         <div
           className="dropdown-menu show shadow overflow-hidden"
-          style={{ maxHeight: 290, maxWidth: 290, overflowY: "auto", backgroundColor: "#d1d3d4" }}
+          style={{ minHeight: 290, minWidth: 290, overflowY: "auto", backgroundColor: "#d1d3d4" }}
         >
           <div className="p-2">
             <input
@@ -231,10 +231,10 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
                         : "text-dark"
                     }`}
                     onClick={() => handleSelect(outlet)}
-                    style={{ borderRadius: 8 }}
+                    style={{ borderRadius: 8, textAlign: "left", whiteSpace: "normal" }}
                   >
                     <div className="d-flex align-items-center">
-                      <p className="text-capitalize m-0 p-0 text-wrap">{outlet.name}</p>
+                      <p className="text-capitalize m-0 p-0 text-wrap" style={{ flex: 1, whiteSpace: "normal", wordBreak: "break-word" }}>{outlet.name}</p>
                       {outlet.outlet_code && (
                         <span className="text-xs text-secondary ms-1">({outlet.outlet_code})</span>
                       )}

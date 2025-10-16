@@ -125,9 +125,8 @@ function Header({
             padding: "3px 0",
             fontSize: "14px",
             fontWeight: "bold",
-            position: "fixed",
+            position: "sticky",
             top: 0,
-            left: 0,
             zIndex: 1100,
           }}
         >
@@ -135,7 +134,7 @@ function Header({
         </div>
       )}
       {!isFullscreen && (
-        <header className="bg-white shadow-sm" style={{ marginTop: "35px", position: "relative" }}>
+        <header className="bg-white shadow-sm" style={{ marginTop: "0px", position: "relative" }}>
           <nav className="navbar navbar-expand-lg navbar-light py-2">
             <div className="container-fluid px-3 d-flex justify-content-between align-items-center">
               <div className="navbar-brand d-flex align-items-center gap-2">
