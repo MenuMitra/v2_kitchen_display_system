@@ -17,7 +17,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       setSelected(selectedOutlet);
     } else {
       const savedName = localStorage.getItem("outlet_name");
-      if (savedName) {
+      if (savedName && String(savedName).trim().length > 0) {
         setSelected({ name: savedName });
       }
     }
@@ -100,6 +100,8 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     };
   }, []);
 
+  const selectedLabel = selected && selected.name && String(selected.name).trim().length > 0 ? selected.name : "Select Outlet";
+
   if (hideDropdown && selected) {
     return (
       <div
@@ -123,7 +125,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
             cursor: "default",
           }}
         >
-          {selected.name}
+          {selectedLabel}
         </div>
       </div>
     );
@@ -168,7 +170,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
           e.currentTarget.style.borderColor = "#d0d5dd";
         }}
       >
-        <span>{selected ? selected.name : "Select Outlet"}</span>
+        <span>{selectedLabel}</span>
         <span
           style={{
             display: "inline-block",
@@ -202,7 +204,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       {show && (
         <div
           className="dropdown-menu show shadow overflow-hidden"
-          style={{ maxHeight: 290, maxWidth: 290, overflowY: "auto", backgroundColor: "#d1d3d4" }}
+          style={{ maxHeight: 290, minWidth:290, maxWidth: 300, overflowY: "auto", backgroundColor: "#d1d3d4" }}
         >
           <div className="p-2">
             <input

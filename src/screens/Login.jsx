@@ -203,6 +203,27 @@ function Login() {
                   </div>
                 ) : (
                   <>
+                    {error && (
+                      <div
+                        className="d-flex justify-content-center"
+                      >
+                        <div
+                          role="alert"
+                          className="mb-2 text-center"
+                          style={{
+                            maxWidth: "420px",
+                            width: "100%",
+                            background: "#f8d7da", // light red background
+                            color: "#842029", // dark red text
+                            border: "1px solid #f5c2c7",
+                            borderRadius: "8px",
+                            padding: "10px 12px",
+                          }}
+                        >
+                          {error}
+                        </div>
+                      </div>
+                    )}
                     <div className="text-center mt-2 mb-3">Enter 4-digit Verification code </div>
                     <div className="d-flex justify-content-center gap-3 mb-3">
                       {otpValues.map((value, index) => (
@@ -285,13 +306,13 @@ function Login() {
             <a className="liking-items" href="https://menumitra.com/" target="_blank" rel="noopener noreferrer">
               <p style={{ color: "gray" }}>Home</p>
             </a>
-            <a className="liking-items" href="https://menumitra.com/book_demo/" target="_blank" rel="noopener noreferrer">
+            <a className="liking-items" href="https://menumitra.com/book-demo" target="_blank" rel="noopener noreferrer">
               <p style={{ color: "gray" }}>Book a demo</p>
             </a>
-            <a className="liking-items" href="https://menumitra.com/about_us/" target="_blank" rel="noopener noreferrer">
+            <a className="liking-items" href="https://menumitra.com/contact" target="_blank" rel="noopener noreferrer">
               <p style={{ color: "gray" }}>Contact</p>
             </a>
-            <a className="liking-items" href="https://menumitra.com/support/" target="_blank" rel="noopener noreferrer">
+            <a className="liking-items" href="https://menumitra.com/support" target="_blank" rel="noopener noreferrer">
               <p style={{ color: "gray" }}>Support</p>
             </a>
           </div>
@@ -301,6 +322,9 @@ function Login() {
             <div className="d-flex flex-column align-items-center justify-content-center">
               
               <div className="kds-socials d-flex justify-content-center gap-1 mb-3">
+                <a href="https://google.com/MenuMitra" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="Google">
+                  <i className="ri-google-fill" />
+                </a>
                 <a href="https://www.facebook.com/people/Menu-Mitra/61565082412478/" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
                   <i className="ri-facebook-fill" />
                 </a>
@@ -310,9 +334,7 @@ function Login() {
                 <a href="https://www.youtube.com/@menumitra" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
                   <i className="ri-youtube-fill" />
                 </a>
-                <a href="https://google.com/MenuMitra" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="Google">
-                  <i className="ri-google-fill" />
-                </a>
+               
               </div>
               <div className="kds-version text-center">
                 Version {APP_INFO.version} <span className="mx-2">|</span> {APP_INFO.releaseDate}
