@@ -51,9 +51,13 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       console.log("outletsData", outletsData);
       if (outletsData.length === 1) {
         const singleOutlet = outletsData[0];
-        setHideDropdown(true);
-        handleSelect(singleOutlet);
-
+        // If the only outlet is inactive, don't auto-select and keep dropdown visible
+        if (singleOutlet && singleOutlet.outlet_status === false) {
+          setHideDropdown(false);
+        } else {
+          setHideDropdown(true);
+          handleSelect(singleOutlet);
+        }
       } else {
         setHideDropdown(false);
       }
@@ -68,6 +72,10 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   // Handle outlet selection
   const handleSelect = (outlet) => {
     console.log("handleSelect", outlet);
+    // Block selection for inactive outlets
+    if (outlet && outlet.outlet_status === false) {
+      return;
+    }
     localStorage.setItem("outlet_id", outlet.outlet_id);
     setSelected(outlet);
     setShow(false);
@@ -222,31 +230,46 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
           >
             {loading && <li className="dropdown-item">Loading...</li>}
             {!loading &&
-              filteredOutlets.map((outlet, index) => (
-                <li className="outlet-list-items" key={`${outlet.outlet_id}-${index}`}>
-                  <button
-                    type="button"
-                    className={`dropdown-item-outlet w-100 ${
-                      selected && selected.outlet_id === outlet.outlet_id
-                        ? "font-bold text-gray-800 bg-blue-100"
-                        : "text-dark"
-                    }`}
-                    onClick={() => handleSelect(outlet)}
-                    style={{ borderRadius: 8, textAlign: "left", whiteSpace: "normal" }}
-                  >
-                    <div className="d-flex align-items-center">
-                      <p className="text-capitalize m-0 p-0 text-wrap" style={{ flex: 1, whiteSpace: "normal", wordBreak: "break-word" }}>{outlet.name}</p>
-                      {outlet.outlet_code && (
-                        <span className="text-xs text-secondary ms-1">({outlet.outlet_code})</span>
+              filteredOutlets.map((outlet, index) => {
+                const isInactive = outlet && outlet.outlet_status === false;
+                const isSelected = selected && selected.outlet_id === outlet.outlet_id;
+                return (
+                  <li className="outlet-list-items p-1 m-1" key={`${outlet.outlet_id}-${index}`}>
+                    <button
+                      type="button"
+                      className={`dropdown-item-outlet w-100 p-1 m-0 ${
+                        isSelected ? "font-bold text-gray-800 bg-blue-100" : "text-dark"
+                      } ${isInactive ? "cursor-not-allowed" : ""}`}
+                      onClick={() => handleSelect(outlet)}
+                      disabled={isInactive}
+                      style={{
+                        borderRadius: 8,
+                        textAlign: "left",
+                        whiteSpace: "normal",
+                        backgroundColor: isInactive ? "#ffe6e6" : undefined,
+                        color: isInactive ? "#a30000" : undefined,
+                        opacity: isInactive ? 0.9 : 1,
+                      }}
+                    >
+                      <div className="d-flex align-items-center">
+                        <p className="text-capitalize m-0 p-0 text-wrap" style={{ flex: 1, whiteSpace: "normal", wordBreak: "break-word" }}>{outlet.name}</p>
+                        {isInactive && (
+                          <span className="text-xs ms-2" style={{ color: "#a30000", fontWeight: 600 }}>
+                            Inactive
+                          </span>
+                        )}
+                        {outlet.outlet_code && (
+                          <span className="text-xs text-secondary ms-1">({outlet.outlet_code})</span>
+                        )}
+                      </div>
+                      {outlet.address && <div className="text-xs text-muted">{outlet.address}</div>}
+                      {outlet.owner_name && (
+                        <div className="text-xs text-secondary">{outlet.owner_name}</div>
                       )}
-                    </div>
-                    {outlet.address && <div className="text-xs text-muted">{outlet.address}</div>}
-                    {outlet.owner_name && (
-                      <div className="text-xs text-secondary">{outlet.owner_name}</div>
-                    )}
-                  </button>
-                </li>
-              ))}
+                    </button>
+                  </li>
+                );
+              })}
             {!loading && filteredOutlets.length === 0 && (
               <li className="dropdown-item text-center text-muted">No outlets found</li>
             )}
