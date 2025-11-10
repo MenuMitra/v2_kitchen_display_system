@@ -1,7 +1,7 @@
 import axios from "axios";
 import { API_URL } from "../config";
 
-const BASE_URL = "https://men4u.xyz/v2/common";
+const BASE_URL = "https://menu4.xyz/v2/common";
 
 export const authService = {
   // Send OTP

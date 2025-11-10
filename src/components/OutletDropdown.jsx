@@ -31,7 +31,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     queryKey: ["outlets", userId],
     enabled: !!token,
     queryFn: async () => {
-      const res = await fetch("https://men4u.xyz/v2/common/get_outlet_list", {
+      const res = await fetch("https://menu4.xyz/v2/common/get_outlet_list", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

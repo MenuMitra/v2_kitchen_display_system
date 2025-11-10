@@ -30,7 +30,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
         app_source: 'admin',
       };
       const response = await axios.post(
-        'https://men4u.xyz/v2/common/cds_kds_order_listview',
+        'https://menu4.xyz/v2/common/cds_kds_order_listview',
         requestPayload,
         {
           headers: {

@@ -58,7 +58,7 @@ function Header({
         app_source: "kds_app"
       };
 
-      await fetch("https://men4u.xyz/v2/common/logout", {
+      await fetch("https://menu4.xyz/v2/common/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(logoutData),
