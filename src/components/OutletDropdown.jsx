@@ -113,17 +113,17 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   if (hideDropdown && selected) {
     return (
       <div
-        className="inline-block min-w-[220px]"
-        style={{ position: "relative", borderRadius: "3px", width: "180px" }}
+        className="inline-block responsive-outlet-display"
+        style={{ position: "relative", borderRadius: "3px", width: "100%", maxWidth: "180px" }}
       >
         <div
           className="selected-outlet-label"
           style={{
             background: "#fff",
             color: "#000",
-            fontSize: "1.12rem",
+            fontSize: "clamp(0.875rem, 2vw, 1.12rem)",
             fontWeight: "500",
-            padding: "0.32rem 1rem",
+            padding: "0.32rem 0.75rem",
             border: "1.5px solid #d0d5dd",
             borderRadius: "15px",
             minHeight: "40px",
@@ -131,6 +131,9 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
             alignItems: "center",
             justifyContent: "left",
             cursor: "default",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
         >
           {selectedLabel}
@@ -142,8 +145,8 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   return (
     <div
       ref={dropdownRef}
-      className="relative inline-block min-w-[220px]"
-      style={{ position: "relative", borderRadius: "3px", minWidth: "180px" }}
+      className="relative inline-block responsive-outlet-dropdown-wrapper"
+      style={{ position: "relative", borderRadius: "3px", width: "100%", maxWidth: "220px", minWidth: "120px" }}
     >
       <button
         type="button"
@@ -155,9 +158,9 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
           justifyContent: "space-between",
           background: "#fff",
           color: "#b4b6b9ff",
-          fontSize: "1.12rem",
+          fontSize: "clamp(0.875rem, 2vw, 1.12rem)",
           fontWeight: "500",
-          padding: "0.32rem 1rem",
+          padding: "0.32rem 0.75rem",
           border: "1.5px solid #d0d5dd",
           borderRadius: "15px",
           minHeight: "40px",
@@ -166,6 +169,9 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
           outline: "none",
           cursor: "pointer",
           transition: "background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = "#e6e6e6";
@@ -211,14 +217,26 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
 
       {show && (
         <div
-          className="dropdown-menu show shadow overflow-hidden"
-          style={{ maxHeight: 290, minWidth:290, maxWidth: 300, overflowY: "auto", backgroundColor: "#d1d3d4" }}
+          className="dropdown-menu show shadow overflow-hidden responsive-outlet-dropdown-menu"
+          style={{ 
+            maxHeight: "290px", 
+            minWidth: "200px", 
+            maxWidth: "300px", 
+            width: "100%",
+            overflowY: "auto", 
+            backgroundColor: "#d1d3d4",
+            position: "absolute",
+            zIndex: 1000,
+            top: "100%",
+            left: 0,
+            marginTop: "0.25rem"
+          }}
         >
           <div className="p-2">
             <input
               type="search"
-              className="form-control form-control-sm"
-              style={{ fontSize: "1.125rem", height: "2.5rem" }}
+              className="form-control form-control-sm responsive-outlet-search"
+              style={{ fontSize: "clamp(0.875rem, 2vw, 1.125rem)", height: "2.5rem" }}
               placeholder="Search outlets..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

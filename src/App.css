@@ -90,7 +90,7 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 576px) {
+@media (max-width: 575.98px) {
   .kds-socials {
     gap: 12px;
   }
@@ -105,6 +105,47 @@
   .card {
     height: auto; /* Adjust height dynamically */
   }
+  .order-tables-orders {
+    padding-left: 8px;
+    font-size: 1rem !important;
+  }
+  .order-tables-orders-number {
+    padding-right: 8px;
+    font-size: 0.75rem !important;
+  }
+  .login-card-main-box {
+    width: 95% !important;
+    margin-top: 20px;
+    padding: 15px !important;
+  }
+  .form-control-login-form {
+    font-size: 1rem !important;
+    height: 42px !important;
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .order-tables-orders {
+    padding-left: 10px;
+    font-size: 1.25rem !important;
+  }
+  .order-tables-orders-number {
+    padding-right: 10px;
+    font-size: 0.9rem !important;
+  }
+  .login-card-main-box {
+    width: 80% !important;
+    max-width: 500px;
+  }
+}
+
+@media (min-width: 992px) {
+  .order-tables-orders {
+    padding-left: 10px;
+  }
+  .order-tables-orders-number {
+    padding-right: 10px;
+  }
 }
 
 body, html {
@@ -113,6 +154,18 @@ body, html {
   margin: 0;
   padding: 0;
   font-family: 'Inter', Arial, sans-serif;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* Ensure containers don't overflow on mobile */
+@media (max-width: 575.98px) {
+  body, html {
+    overflow-x: hidden;
+  }
+  .container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
 }
 
 .input-element-login {
@@ -214,10 +267,68 @@ body, html {
 }
 .main-kds-view-container{
   width: 100% !important;
+  margin: 0 auto;
+  padding: 0.5rem;
 }
+
 .child-container{
-  width: 33% !important;
+  width: 100% !important;
 }
+
+/* Responsive container adjustments */
+@media (min-width: 576px) {
+  .main-kds-view-container {
+    padding: 0.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .child-container {
+    width: 50% !important;
+  }
+  .main-kds-view-container {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 992px) {
+  .child-container {
+    width: 33.333% !important;
+  }
+  .main-kds-view-container {
+    padding: 1.5rem;
+  }
+}
+
+/* Additional responsive utilities */
+@media (max-width: 575.98px) {
+  .flex-grow-1 {
+    padding: 0.5rem !important;
+  }
+  .p-3 {
+    padding: 0.75rem !important;
+  }
+  .g-3 {
+    --bs-gutter-y: 0.5rem;
+    --bs-gutter-x: 0.5rem;
+  }
+  .card-body {
+    padding: 0.5rem !important;
+  }
+  .bg-opacity-10 {
+    padding: 0.5rem !important;
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .flex-grow-1 {
+    padding: 1rem !important;
+  }
+  .p-3 {
+    padding: 1rem !important;
+  }
+}
+
 .order-tables-orders{
   padding-left: 10px;
 }
@@ -228,6 +339,37 @@ body, html {
   border: 2px solid gray;
   border-radius: 10px;
   margin: 10px;
+}
+
+/* Responsive outlet dropdown */
+@media (max-width: 575.98px) {
+  .responsive-outlet-dropdown-wrapper {
+    max-width: 150px !important;
+    min-width: 100px !important;
+  }
+  .responsive-outlet-display {
+    max-width: 120px !important;
+  }
+  .responsive-outlet-dropdown-menu {
+    min-width: 180px !important;
+    max-width: 250px !important;
+    left: 0 !important;
+    right: auto !important;
+  }
+  .responsive-outlet-search {
+    font-size: 0.875rem !important;
+    height: 2.25rem !important;
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .responsive-outlet-dropdown-wrapper {
+    max-width: 200px !important;
+    min-width: 150px !important;
+  }
+  .responsive-outlet-display {
+    max-width: 160px !important;
+  }
 }
 
 .logout-box-container{
