@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { ENV } from "../config/env";
+import { V2_COMMON_BASE } from "../config";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "./cache";
 
@@ -32,7 +32,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     queryKey: ["outlets", userId],
     enabled: !!token,
     queryFn: async () => {
-      const res = await fetch("https://menu4.xyz/v2/common/get_outlet_list", {
+      const res = await fetch(`${V2_COMMON_BASE}/get_outlet_list`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

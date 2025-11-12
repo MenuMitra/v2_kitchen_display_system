@@ -4,6 +4,7 @@ import logo from "../assets/logo.png";
 import OutletDropdown from "./OutletDropdown";
 import SubscriptionRemainDay from "./SubscriptionRemainDay";
 import { ENV } from "../config/env";
+import { V2_COMMON_BASE } from "../config";
 
 console.log("current environment", ENV.env);
 
@@ -60,7 +61,7 @@ function Header({
         app_source: "kds_app"
       };
 
-      await fetch("https://menu4.xyz/v2/common/logout", {
+      await fetch(`${V2_COMMON_BASE}/logout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(logoutData),

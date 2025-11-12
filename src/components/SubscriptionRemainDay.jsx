@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { ENV } from '../config/env';
+import { V2_COMMON_BASE } from '../config';
 import { useNavigate } from 'react-router-dom';
 
 const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: propSubscriptionData }) => {
@@ -31,7 +32,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
         app_source: 'admin',
       };
       const response = await axios.post(
-        'https://menu4.xyz/v2/common/cds_kds_order_listview',
+        `${V2_COMMON_BASE}/cds_kds_order_listview`,
         requestPayload,
         {
           headers: {
