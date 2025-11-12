@@ -18,7 +18,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       setSelected(selectedOutlet);
     } else {
       const savedName = localStorage.getItem("outlet_name");
-      if (savedName) {
+      if (savedName && String(savedName).trim().length > 0) {
         setSelected({ name: savedName });
       }
     }
@@ -32,7 +32,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     queryKey: ["outlets", userId],
     enabled: !!token,
     queryFn: async () => {
-      const res = await fetch(`${ENV.V2_COMMON_BASE}/get_outlet_list`, {
+      const res = await fetch("https://menu4.xyz/v2/common/get_outlet_list", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -52,9 +52,13 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       console.log("outletsData", outletsData);
       if (outletsData.length === 1) {
         const singleOutlet = outletsData[0];
-        setHideDropdown(true);
-        handleSelect(singleOutlet);
-
+        // If the only outlet is inactive, don't auto-select and keep dropdown visible
+        if (singleOutlet && singleOutlet.outlet_status === false) {
+          setHideDropdown(false);
+        } else {
+          setHideDropdown(true);
+          handleSelect(singleOutlet);
+        }
       } else {
         setHideDropdown(false);
       }
@@ -69,6 +73,10 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   // Handle outlet selection
   const handleSelect = (outlet) => {
     console.log("handleSelect", outlet);
+    // Block selection for inactive outlets
+    if (outlet && outlet.outlet_status === false) {
+      return;
+    }
     localStorage.setItem("outlet_id", outlet.outlet_id);
     setSelected(outlet);
     setShow(false);
@@ -101,20 +109,22 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     };
   }, []);
 
+  const selectedLabel = selected && selected.name && String(selected.name).trim().length > 0 ? selected.name : "Select Outlet";
+
   if (hideDropdown && selected) {
     return (
       <div
-        className="inline-block min-w-[220px]"
-        style={{ position: "relative", borderRadius: "3px", width: "180px" }}
+        className="inline-block responsive-outlet-display"
+        style={{ position: "relative", borderRadius: "3px", width: "100%", maxWidth: "180px" }}
       >
         <div
           className="selected-outlet-label"
           style={{
             background: "#fff",
             color: "#000",
-            fontSize: "1.12rem",
+            fontSize: "clamp(0.875rem, 2vw, 1.12rem)",
             fontWeight: "500",
-            padding: "0.32rem 1rem",
+            padding: "0.32rem 0.75rem",
             border: "1.5px solid #d0d5dd",
             borderRadius: "15px",
             minHeight: "40px",
@@ -122,9 +132,12 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
             alignItems: "center",
             justifyContent: "left",
             cursor: "default",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
         >
-          {selected.name}
+          {selectedLabel}
         </div>
       </div>
     );
@@ -133,8 +146,8 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   return (
     <div
       ref={dropdownRef}
-      className="relative inline-block min-w-[220px]"
-      style={{ position: "relative", borderRadius: "3px", minWidth: "180px" }}
+      className="relative inline-block responsive-outlet-dropdown-wrapper"
+      style={{ position: "relative", borderRadius: "3px", width: "100%", maxWidth: "220px", minWidth: "120px" }}
     >
       <button
         type="button"
@@ -146,9 +159,9 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
           justifyContent: "space-between",
           background: "#fff",
           color: "#b4b6b9ff",
-          fontSize: "1.12rem",
+          fontSize: "clamp(0.875rem, 2vw, 1.12rem)",
           fontWeight: "500",
-          padding: "0.32rem 1rem",
+          padding: "0.32rem 0.75rem",
           border: "1.5px solid #d0d5dd",
           borderRadius: "15px",
           minHeight: "40px",
@@ -157,6 +170,9 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
           outline: "none",
           cursor: "pointer",
           transition: "background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = "#e6e6e6";
@@ -169,7 +185,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
           e.currentTarget.style.borderColor = "#d0d5dd";
         }}
       >
-        <span>{selected ? selected.name : "Select Outlet"}</span>
+        <span>{selectedLabel}</span>
         <span
           style={{
             display: "inline-block",
@@ -202,14 +218,26 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
 
       {show && (
         <div
-          className="dropdown-menu show shadow overflow-hidden"
-          style={{ minHeight: 290, minWidth: 290, overflowY: "auto", backgroundColor: "#d1d3d4" }}
+          className="dropdown-menu show shadow overflow-hidden responsive-outlet-dropdown-menu"
+          style={{ 
+            maxHeight: "290px", 
+            minWidth: "200px", 
+            maxWidth: "300px", 
+            width: "100%",
+            overflowY: "auto", 
+            backgroundColor: "#d1d3d4",
+            position: "absolute",
+            zIndex: 1000,
+            top: "100%",
+            left: 0,
+            marginTop: "0.25rem"
+          }}
         >
           <div className="p-2">
             <input
               type="search"
-              className="form-control form-control-sm"
-              style={{ fontSize: "1.125rem", height: "2.5rem" }}
+              className="form-control form-control-sm responsive-outlet-search"
+              style={{ fontSize: "clamp(0.875rem, 2vw, 1.125rem)", height: "2.5rem" }}
               placeholder="Search outlets..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -221,31 +249,46 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
           >
             {loading && <li className="dropdown-item">Loading...</li>}
             {!loading &&
-              filteredOutlets.map((outlet, index) => (
-                <li className="outlet-list-items" key={`${outlet.outlet_id}-${index}`}>
-                  <button
-                    type="button"
-                    className={`dropdown-item-outlet w-100 ${
-                      selected && selected.outlet_id === outlet.outlet_id
-                        ? "font-bold text-gray-800 bg-blue-100"
-                        : "text-dark"
-                    }`}
-                    onClick={() => handleSelect(outlet)}
-                    style={{ borderRadius: 8, textAlign: "left", whiteSpace: "normal" }}
-                  >
-                    <div className="d-flex align-items-center">
-                      <p className="text-capitalize m-0 p-0 text-wrap" style={{ flex: 1, whiteSpace: "normal", wordBreak: "break-word" }}>{outlet.name}</p>
-                      {outlet.outlet_code && (
-                        <span className="text-xs text-secondary ms-1">({outlet.outlet_code})</span>
+              filteredOutlets.map((outlet, index) => {
+                const isInactive = outlet && outlet.outlet_status === false;
+                const isSelected = selected && selected.outlet_id === outlet.outlet_id;
+                return (
+                  <li className="outlet-list-items p-1 m-1" key={`${outlet.outlet_id}-${index}`}>
+                    <button
+                      type="button"
+                      className={`dropdown-item-outlet w-100 p-1 m-0 ${
+                        isSelected ? "font-bold text-gray-800 bg-blue-100" : "text-dark"
+                      } ${isInactive ? "cursor-not-allowed" : ""}`}
+                      onClick={() => handleSelect(outlet)}
+                      disabled={isInactive}
+                      style={{
+                        borderRadius: 8,
+                        textAlign: "left",
+                        whiteSpace: "normal",
+                        backgroundColor: isInactive ? "#ffe6e6" : undefined,
+                        color: isInactive ? "#a30000" : undefined,
+                        opacity: isInactive ? 0.9 : 1,
+                      }}
+                    >
+                      <div className="d-flex align-items-center">
+                        <p className="text-capitalize m-0 p-0 text-wrap" style={{ flex: 1, whiteSpace: "normal", wordBreak: "break-word" }}>{outlet.name}</p>
+                        {isInactive && (
+                          <span className="text-xs ms-2" style={{ color: "#a30000", fontWeight: 600 }}>
+                            Inactive
+                          </span>
+                        )}
+                        {outlet.outlet_code && (
+                          <span className="text-xs text-secondary ms-1">({outlet.outlet_code})</span>
+                        )}
+                      </div>
+                      {outlet.address && <div className="text-xs text-muted">{outlet.address}</div>}
+                      {outlet.owner_name && (
+                        <div className="text-xs text-secondary">{outlet.owner_name}</div>
                       )}
-                    </div>
-                    {outlet.address && <div className="text-xs text-muted">{outlet.address}</div>}
-                    {outlet.owner_name && (
-                      <div className="text-xs text-secondary">{outlet.owner_name}</div>
-                    )}
-                  </button>
-                </li>
-              ))}
+                    </button>
+                  </li>
+                );
+              })}
             {!loading && filteredOutlets.length === 0 && (
               <li className="dropdown-item text-center text-muted">No outlets found</li>
             )}

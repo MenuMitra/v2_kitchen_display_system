@@ -1,8 +1,7 @@
 import axios from "axios";
 import { API_URL } from "../config";
 
-import { ENV } from "../config/env";
-const BASE_URL = ENV.V2_COMMON_BASE;
+const BASE_URL = "https://menu4.xyz/v2/common";
 
 export const authService = {
   // Send OTP

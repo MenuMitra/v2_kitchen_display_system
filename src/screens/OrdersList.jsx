@@ -3,6 +3,7 @@ import React, {
   useState,
   useRef,
   useCallback,
+  useMemo,
   forwardRef,
   useImperativeHandle,
 } from "react";
@@ -45,6 +46,43 @@ const styles = `
   .menu-items-scroll::-webkit-scrollbar-thumb:hover {
     background: #555;
   }
+  
+  /* Responsive Styles */
+  @media (max-width: 575.98px) {
+    .menu-item-text { font-size: 14px !important; }
+    .menu-items-scroll { max-height: 250px; }
+    .circular-countdown { width: 32px; height: 32px; }
+    .timer-text-overlay { font-size: 10px; }
+    .responsive-header-text { font-size: 1rem !important; }
+    .responsive-order-card { margin-bottom: 0.75rem; }
+    .responsive-order-number { font-size: 1.25rem !important; }
+    .responsive-order-info { font-size: 0.875rem !important; }
+    .responsive-menu-name { font-size: 0.875rem !important; }
+    .responsive-menu-size { font-size: 0.75rem !important; }
+    .responsive-menu-quantity { font-size: 0.875rem !important; }
+    .responsive-serve-btn { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+    .responsive-complete-btn { padding: 0.5rem; font-size: 0.875rem; }
+    .responsive-refresh-text { font-size: 0.75rem; }
+  }
+  
+  @media (min-width: 576px) and (max-width: 991.98px) {
+    .menu-item-text { font-size: 16px !important; }
+    .menu-items-scroll { max-height: 350px; }
+    .responsive-header-text { font-size: 1.5rem !important; }
+    .responsive-order-number { font-size: 1.5rem !important; }
+    .responsive-order-info { font-size: 1rem !important; }
+    .responsive-menu-name { font-size: 1rem !important; }
+    .responsive-menu-size { font-size: 0.875rem !important; }
+    .responsive-menu-quantity { font-size: 1rem !important; }
+  }
+  
+  @media (min-width: 992px) {
+    .menu-item-text { font-size: 18px !important; }
+    .menu-items-scroll { max-height: 400px; }
+    .responsive-header-text { font-size: 2rem !important; }
+    .responsive-section-header { border-radius: 1rem !important; }
+    .responsive-order-card { border-radius: 0.75rem !important; }
+  }
 `;
 const styleSheet = document.createElement("style");
 styleSheet.innerText = styles;
@@ -56,7 +94,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
   const [placedOrders, setPlacedOrders] = useState([]);
   const [cookingOrders, setCookingOrders] = useState([]);
-  const [paidOrders, setPaidOrders] = useState([]);
+  const [, setPaidOrders] = useState([]);
   const [servedOrders, setServedOrders] = useState([]);
   const [subscriptionData, setSubscriptionData] = useState(null);
 
@@ -93,7 +131,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     enabled: !!accessToken && isValidOutletId,
     refetchInterval: false,
     queryFn: async () => {
-      const response = await fetch(`${ENV.V2_COMMON_BASE}/cds_kds_order_listview`, {
+      const response = await fetch("https://menu4.xyz/v2/common/cds_kds_order_listview", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -121,8 +159,14 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     const moveOrder = (orders, setter) => {
       const index = orders.findIndex((o) => o.order_id === orderId);
       if (index === -1) return null;
-      const order = orders[index];
+      const order = { ...orders[index] };
       order.order_status = nextStatus;
+      if (nextStatus === "served" && Array.isArray(order.menu_details)) {
+        order.menu_details = order.menu_details.map((m) => ({
+          ...m,
+          menu_status: "served",
+        }));
+      }
       const newOrders = [...orders];
       newOrders.splice(index, 1);
       setter(newOrders);
@@ -169,7 +213,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         app_source: "kds_app",
       };
 
-      const response = await fetch(`${ENV.V2_COMMON_BASE}/update_order_status`, {
+      const response = await fetch("https://menu4.xyz/v2/common/update_order_status", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -230,6 +274,26 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       setError(null);
       setInitialLoading(false);
 
+      // snapshot current menus by order for "new item" detection on the NEXT refresh
+      try {
+        const currentMenusMap = {};
+        const collect = (list) => {
+          if (!Array.isArray(list)) return;
+          list.forEach((o) => {
+            currentMenusMap[o.order_id] = Array.isArray(o.menu_details)
+              ? o.menu_details.map((m) => m.menu_name)
+              : [];
+          });
+        };
+        collect(result.placed_orders);
+        collect(result.cooking_orders);
+        collect(result.paid_orders);
+        collect(result.served_orders);
+        setPreviousMenuItems(currentMenusMap);
+      } catch (e) {
+        // ignore mapping errors
+      }
+
       if (onSubscriptionDataChange) {
         onSubscriptionDataChange(result.subscription_details || null);
       }
@@ -256,7 +320,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     const refreshToken = localStorage.getItem("refresh_token");
     if (!refreshToken) return false;
     try {
-      const response = await fetch(`${ENV.COMMON_API_BASE}/token/refresh`, {
+      const response = await fetch("https://menu4.xyz/common_api/token/refresh", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh: refreshToken }),
@@ -272,6 +336,70 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       return false;
     }
   };
+
+  // Update a single menu item status using update_menu_status API
+  const handleServeMenuItem = useCallback(
+    async (orderId, menu) => {
+      if (!accessToken || !orderId || !menu || !menu.menu_id) {
+        navigate("/login");
+        return;
+      }
+      try {
+        // Build menu_items array with menu_id and optional portion_id
+        const menuItem = {
+          menu_id: Number(menu.menu_id),
+        };
+        if (menu.portion_id) {
+          menuItem.portion_id = Number(menu.portion_id);
+        }
+
+        const data = {
+          outlet_id: String(currentOutletId),
+          order_id: String(orderId),
+          menu_items: [menuItem],
+          menu_status: "served",
+          app_source: "kds_app",
+        };
+
+        const response = await fetch("https://menu4.xyz/v2/common/update_menu_status", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            const ok = await refreshToken();
+            if (ok) return handleServeMenuItem(orderId, menu);
+            navigate("/login");
+            return;
+          }
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        // Update local state immediately for responsive UI
+        setCookingOrders((prev) =>
+          prev.map((order) => {
+            if (order.order_id !== orderId) return order;
+            if (!Array.isArray(order.menu_details)) return order;
+            const updatedMenus = order.menu_details.map((m) =>
+              String(m.menu_id) === String(menu.menu_id) ? { ...m, menu_status: "served" } : m
+            );
+            return { ...order, menu_details: updatedMenus };
+          })
+        );
+      } catch (error) {
+        console.error("Error updating menu item status:", error.message);
+        // Fallback to refetch to reconcile with server
+        refetch();
+      }
+    },
+    [accessToken, currentOutletId, navigate, refetch]
+  );
 
   useImperativeHandle(ref, () => ({
     fetchOrders: refetch,
@@ -369,7 +497,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         return;
       }
       try {
-        const response = await fetch(`${ENV.V2_COMMON_BASE}/update_order_status`, {
+        const response = await fetch("https://menu4.xyz/v2/common/update_order_status", {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -424,11 +552,14 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     );
   });
 
-  const foodTypeColors = {
-    veg: "#00c82fff",
-    nonveg: "#cc0000ff",
-    vegan: "#c09000ff",
-  };
+  const foodTypeColors = useMemo(
+    () => ({
+      veg: "#00c82fff",
+      nonveg: "#cc0000ff",
+      vegan: "#c09000ff",
+    }),
+    []
+  );
 
   const renderOrders = useCallback(
     (orders, type) => {
@@ -439,10 +570,35 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         const prevMenuItems = previousMenuItems[order.order_id] || [];
         const cssType = type === "placed" ? "secondary" : type;
 
+        // Filter menus per section
+        let visibleMenus = Array.isArray(order.menu_details) ? order.menu_details : [];
+        if (type === "warning") {
+          // Cooking column shows non-served items
+          visibleMenus = visibleMenus.filter(
+            (m) => (m.menu_status || "cooking") !== "served"
+          );
+        } else if (type === "success") {
+          // Pick Up column shows served items
+          visibleMenus = visibleMenus.filter((m) => m.menu_status === "served");
+        }
+
+        // Sort: new items first in Cooking
+        if (type === "warning" && prevMenuItems.length) {
+          visibleMenus = [...visibleMenus].sort((a, b) => {
+            const aNew = !prevMenuItems.includes(a.menu_name);
+            const bNew = !prevMenuItems.includes(b.menu_name);
+            if (aNew === bNew) return 0;
+            return aNew ? -1 : 1;
+          });
+        }
+
+        // Skip rendering card if no visible items for this section
+        if (!visibleMenus.length) return null;
+
         return (
           <div className="col-12" key={order.order_id}>
             <div
-              className="card bg-white rounded-3"
+              className="card bg-white rounded-2 responsive-order-card"
               style={{
                 height: "auto",
                 minHeight: "unset",
@@ -450,12 +606,12 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                 width: "100%",
               }}
             >
-              <div className={`bg-${cssType} bg-opacity-10 py-2`}>
-                <div className="d-flex justify-content-between align-items-center">
-                  <p className="fs-3 fw-bold mb-0 order-tables-orders">
+              <div className={`bg-${cssType} bg-opacity-10 py-2 py-md-2`}>
+                <div className="d-flex justify-content-between align-items-center flex-wrap gap-1 gap-md-0">
+                  <p className="fs-4 fs-md-3 fw-bold mb-0 order-tables-orders responsive-order-number">
                     <i className="bx bx-hash"></i>{order.order_number}
                   </p>
-                  <p className="mb-0 fs-5 text-capitalize fw-semibold order-tables-orders-number">
+                  <p className="mb-0 fs-6 fs-md-5 text-capitalize fw-semibold order-tables-orders-number responsive-order-info">
                     {order.section_name
                       ? order.section_name
                       : `${order.order_type}${
@@ -467,9 +623,9 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                 </div>
               </div>
               <div className="card-body p-1">
-                {Array.isArray(order.menu_details) && (
-                  <div className={order.menu_details.length > 6 ? "menu-items-scroll" : ""}>
-                    {order.menu_details.map((menu, index) => {
+                {Array.isArray(visibleMenus) && (
+                  <div className={visibleMenus.length > 6 ? "menu-items-scroll" : ""}>
+                    {visibleMenus.map((menu, index) => {
                       const isNewItem =
                         prevMenuItems.length > 0 &&
                         !prevMenuItems.includes(menu.menu_name);
@@ -487,9 +643,10 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                             className={`d-flex fw-semibold text-capitalize menu-item-text ${
                               isNewItem ? "text-danger" : ""
                             }`}
-                            style={{ alignItems: "center" }}
+                            style={{ alignItems: "center", flex: "1 1 auto", minWidth: "120px" }}
                           >
                             <hr
+                              className="responsive-menu-indicator"
                               style={{
                                 height: "20px",
                                 backgroundColor: hrColor,
@@ -499,22 +656,34 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                                 padding: "0px",
                               }}
                             />
-                            <p className="mb-0">{menu.menu_name}</p>
+                            <p className="mb-0 responsive-menu-name">{menu.menu_name}</p>
                           </div>
                           <div
-                            className={`fw-semibold text-capitalize menu-item-text ${
+                            className={`fw-semibold text-capitalize menu-item-text responsive-menu-size ${
                               isNewItem ? "text-danger" : ""
                             }`}
                           >
                             {menu.half_or_full}
                           </div>
                           <div
-                            className="d-flex align-items-center text-end gap-2"
+                            className="d-flex align-items-center text-end gap-1 gap-md-2 responsive-menu-actions"
                             style={{ paddingRight: "10px" }}
                           >
-                            <span className="fw-semibold menu-item-text">
+                            <span className="fw-semibold menu-item-text responsive-menu-quantity">
                               × {menu.quantity}
                             </span>
+                            {manualMode &&
+                              type === "warning" &&
+                              !isSuperOwner &&
+                              order.kds_button_enabled === 1 && (
+                                <button
+                                  className="btn btn-sm btn-success responsive-serve-btn"
+                                  onClick={() => handleServeMenuItem(order.order_id, menu)}
+                                >
+                                  <span className="d-none d-sm-inline">Served</span>
+                                  <span className="d-sm-none">✓</span>
+                                </button>
+                              )}
                           </div>
                           {menu.comment && (
                             <div
@@ -533,10 +702,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                 {/* Only show Complete Order button if kds_button_enabled = 1 */}
                 {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
                   <button
-                    className="btn btn-success w-100"
+                    className="btn btn-success w-100 responsive-complete-btn"
                     onClick={() => updateOrderStatus(order.order_id, "served")}
                   >
-                    Complete Order
+                    <span className="d-none d-sm-inline">Complete Order</span>
+                    <span className="d-sm-none">Complete</span>
                   </button>
                 )}
 
@@ -552,7 +722,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         );
       });
     },
-    [manualMode, previousMenuItems, updateOrderStatus, userRole]
+    [foodTypeColors, handleServeMenuItem, manualMode, previousMenuItems, updateOrderStatus, userRole]
   );
 
   const outletName = localStorage.getItem("outlet_name");
@@ -588,29 +758,65 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
             )}
 
             {!initialLoading && !error && (
-              <div className="row g-3  main-kds-view-container">
+              <div className="row g-2 g-md-3 main-kds-view-container">
               
-                <div className="col-4 child-container">
-                  <h4 className="display-5 text-white text-center fw-bold mb-3 mb-md-4 bg-secondary py-2 d-flex align-items-center justify-content-center rounded-4">
-                    Placed ({placedOrders.length})
+                <div className="col-12 col-md-6 col-lg-4 child-container mb-3 mb-md-0">
+                  <h4 className="display-5 text-white text-center fw-bold mb-2 mb-md-3 mb-lg-4 bg-secondary py-2 py-md-3 d-flex align-items-center justify-content-center rounded-3 responsive-section-header">
+                    <span className="responsive-header-text">Placed ({placedOrders.length})</span>
                   </h4>
-                  <div className="row g-3">{renderOrders(placedOrders, "secondary")}</div>
+                  <div className="row g-2 g-md-3">{renderOrders(placedOrders, "secondary")}</div>
                 </div>
-                <div className="col-4 child-container">
-                  <h4 className="display-5 text-white text-center fw-bold mb-3 mb-md-4 bg-warning py-2 d-flex align-items-center justify-content-center rounded-4">
-                    Cooking ({cookingOrders.length})
+                <div className="col-12 col-md-6 col-lg-4 child-container mb-3 mb-md-0">
+                  <h4 className="display-5 text-white text-center fw-bold mb-2 mb-md-3 mb-lg-4 bg-warning py-2 py-md-3 d-flex align-items-center justify-content-center rounded-3 responsive-section-header">
+                    <span className="responsive-header-text">Cooking ({cookingOrders.length})</span>
                   </h4>
-                  
-                  <div className="row g-3 justify-content-center">{renderOrders(cookingOrders, "warning")}</div>
+                  {/*
+                    For Cooking: only show items that are not yet served in each order
+                  */}
+                  <div className="row g-2 g-md-3 justify-content-center">
+                    {renderOrders(
+                      cookingOrders.map((o) => ({
+                        ...o,
+                        menu_details: Array.isArray(o.menu_details)
+                          ? o.menu_details.filter((m) => (m.menu_status || "cooking") !== "served")
+                          : [],
+                      })),
+                      "warning"
+                    )}
+                  </div>
                 </div>
-                <div className="col-4 child-container">
-                  <h4 className="display-5 text-white text-center fw-bold mb-3 mb-md-4 bg-success py-2 d-flex align-items-center justify-content-center rounded-4">
-                    Pick Up ({servedOrders.length})
+                <div className="col-12 col-md-6 col-lg-4 child-container mb-3 mb-md-0">
+                  <h4 className="display-5 text-white text-center fw-bold mb-2 mb-md-3 mb-lg-4 bg-success py-2 py-md-3 d-flex align-items-center justify-content-center rounded-3 responsive-section-header">
+                    <span className="responsive-header-text">Pick Up ({servedOrders.length})</span>
                   </h4>
-                  <div className="row g-3">{renderOrders(servedOrders, "success")}</div>
+                  {/*
+                    For Pick Up: show served items from both servedOrders and cookingOrders
+                  */}
+                  <div className="row g-2 g-md-3">
+                    {renderOrders(
+                      // merge cooking and served by order_id, prefer servedOrders base when duplicates
+                      (() => {
+                        const map = new Map();
+                        [...cookingOrders, ...servedOrders].forEach((o) => {
+                          const existing = map.get(o.order_id);
+                          if (!existing || existing.order_status !== "served") {
+                            map.set(o.order_id, o);
+                          }
+                        });
+                        return Array.from(map.values()).map((o) => ({
+                          ...o,
+                          order_status: o.order_status === "served" ? "served" : "cooking",
+                          menu_details: Array.isArray(o.menu_details)
+                            ? o.menu_details.filter((m) => m.menu_status === "served")
+                            : [],
+                        }));
+                      })(),
+                      "success"
+                    )}
+                  </div>
                 </div>
                 {lastRefreshTime && (
-                  <div className="text-center mt-2 text-muted">Last refreshed at: {lastRefreshTime}</div>
+                  <div className="text-center mt-2 text-muted small responsive-refresh-text">Last refreshed at: {lastRefreshTime}</div>
                 )}
               </div>
             )}

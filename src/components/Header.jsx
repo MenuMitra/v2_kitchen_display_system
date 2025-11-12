@@ -60,7 +60,7 @@ function Header({
         app_source: "kds_app"
       };
 
-      await fetch(`${ENV.V2_COMMON_BASE}/logout`, {
+      await fetch("https://menu4.xyz/v2/common/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(logoutData),
@@ -95,6 +95,66 @@ function Header({
     padding: "8px 26px",
     boxShadow: "none",
   };
+  
+  // Add responsive styles
+  React.useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      @media (max-width: 575.98px) {
+        .responsive-header-logo {
+          height: 32px !important;
+          width: 32px !important;
+        }
+        .responsive-header-brand {
+          gap: 0.5rem !important;
+        }
+        .responsive-filter-btn {
+          min-width: 60px !important;
+          font-size: 14px !important;
+          padding: 6px 16px !important;
+        }
+        .responsive-header-icon {
+          padding: 0.375rem 0.5rem !important;
+          font-size: 0.875rem !important;
+        }
+        .responsive-kds-title {
+          display: none !important;
+        }
+        .responsive-outlet-dropdown {
+          max-width: 120px;
+        }
+        .custom-toggle-group {
+          width: 100%;
+          display: flex;
+        }
+        .custom-toggle-group button {
+          flex: 1;
+        }
+      }
+      @media (min-width: 576px) and (max-width: 991.98px) {
+        .responsive-filter-btn {
+          min-width: 70px !important;
+          font-size: 16px !important;
+          padding: 7px 20px !important;
+        }
+        .responsive-header-icon {
+          padding: 0.4rem 0.6rem !important;
+        }
+        .responsive-kds-title h1 {
+          font-size: clamp(18px, 4vw, 28px) !important;
+        }
+      }
+      @media (min-width: 992px) {
+        .responsive-header-actions {
+          gap: 12px !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   const activeBtnStyle = {
     ...toggleBtnStyle,
@@ -135,21 +195,23 @@ function Header({
       )}
       {!isFullscreen && (
         <header className="bg-white shadow-sm" style={{ marginTop: "0px", position: "relative" }}>
-          <nav className="navbar navbar-expand-lg navbar-light py-2">
-            <div className="container-fluid px-3 d-flex justify-content-between align-items-center">
-              <div className="navbar-brand d-flex align-items-center gap-2">
+          <nav className="navbar navbar-expand-lg navbar-light py-2 py-md-2">
+            <div className="container-fluid px-2 px-md-3">
+              <div className="navbar-brand d-flex align-items-center gap-1 gap-md-2 responsive-header-brand">
                 <img
                   src={logo}
                   alt="Menumitra Logo"
+                  className="responsive-header-logo"
                   style={{ height: "40px", width: "40px", objectFit: "contain" }}
                 />
-                <span className="fs-5 fw-bold text-dark">Menumitra</span>
-                <div>
+                <span className="fs-6 fs-md-5 fw-bold text-dark d-none d-sm-inline">Menumitra</span>
+                <span className="fs-6 fw-bold text-dark d-sm-none">MM</span>
+                <div className="responsive-outlet-dropdown">
                   <OutletDropdown selectedOutlet={selectedOutlet} onSelect={onOutletSelect} />
                 </div>
               </div>
               <div
-                className="position-absolute top-50 start-50 translate-middle text-center"
+                className="position-absolute top-50 start-50 translate-middle text-center d-none d-md-block responsive-kds-title"
                 style={{ pointerEvents: "none" }}
               >
                 <h1
@@ -163,54 +225,72 @@ function Header({
                   K D S
                 </h1>
               </div>
-              <div className="d-flex align-items-center" style={{ gap: "12px" }}>
-                <div className="custom-toggle-group">
-                  <button
-                    type="button"
-                    style={{
-                      ...(localFilter === "today" ? activeBtnStyle : nonActiveBtnStyle),
-                      ...(localFilter !== "today" && isTodayHover ? { backgroundColor: "#e9ecef" } : {}),
-                    }}
-                    onMouseEnter={() => setIsTodayHover(true)}
-                    onMouseLeave={() => setIsTodayHover(false)}
-                    onClick={() => changeFilter("today")}
-                  >
-                    Today
-                  </button>
-                  <button
-                    type="button"
-                    style={{
-                      ...(localFilter === "all" ? activeBtnStyle : nonActiveBtnStyle),
-                      ...(localFilter !== "all" && isAllHover ? { backgroundColor: "#e9ecef" } : {}),
-                    }}
-                    onMouseEnter={() => setIsAllHover(true)}
-                    onMouseLeave={() => setIsAllHover(false)}
-                    onClick={() => changeFilter("all")}
-                  >
-                    All
-                  </button>
+              <button
+                className="navbar-toggler d-md-none"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navbarNav"
+                aria-controls="navbarNav"
+                aria-expanded="false"
+                aria-label="Toggle navigation"
+                style={{ border: "none", padding: "0.25rem 0.5rem" }}
+              >
+                <span className="navbar-toggler-icon"></span>
+              </button>
+              <div className="collapse navbar-collapse" id="navbarNav">
+                <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center ms-auto responsive-header-actions" style={{ gap: "8px" }}>
+                  <div className="custom-toggle-group w-100 w-md-auto">
+                    <button
+                      type="button"
+                      className="responsive-filter-btn"
+                      style={{
+                        ...(localFilter === "today" ? activeBtnStyle : nonActiveBtnStyle),
+                        ...(localFilter !== "today" && isTodayHover ? { backgroundColor: "#e9ecef" } : {}),
+                      }}
+                      onMouseEnter={() => setIsTodayHover(true)}
+                      onMouseLeave={() => setIsTodayHover(false)}
+                      onClick={() => changeFilter("today")}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      className="responsive-filter-btn"
+                      style={{
+                        ...(localFilter === "all" ? activeBtnStyle : nonActiveBtnStyle),
+                        ...(localFilter !== "all" && isAllHover ? { backgroundColor: "#e9ecef" } : {}),
+                      }}
+                      onMouseEnter={() => setIsAllHover(true)}
+                      onMouseLeave={() => setIsAllHover(false)}
+                      onClick={() => changeFilter("all")}
+                    >
+                      All
+                    </button>
+                  </div>
+                  <div className="d-flex align-items-center gap-1 gap-md-2 w-100 w-md-auto justify-content-between justify-content-md-start">
+                    <button
+                      className="header-icons-items btn btn-outline-secondary refresh-btn-heder responsive-header-icon"
+                      title="Refresh"
+                      onClick={() => onRefresh?.()}
+                    >
+                      <i className="fa-solid fa-rotate" />
+                    </button>
+                    <button
+                      className="header-icons-items btn btn-outline-secondary responsive-header-icon"
+                      title="Fullscreen"
+                      onClick={handleFullscreen}
+                    >
+                      <i className={isFullscreen ? "bx bx-exit-fullscreen" : "bx bx-fullscreen"} />
+                    </button>
+                    <button
+                      className="header-icons-items btn btn-outline-danger responsive-header-icon"
+                      title="Logout"
+                      onClick={() => setShowLogoutConfirm(true)}
+                    >
+                      <i className="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                  </div>
                 </div>
-                <button
-                  className="header-icons-items btn btn-outline-secondary refresh-btn-heder"
-                  title="Refresh"
-                  onClick={() => onRefresh?.()}
-                >
-                  <i className="fa-solid fa-rotate" />
-                </button>
-                <button
-                  className="header-icons-items btn btn-outline-secondary"
-                  title="Fullscreen"
-                  onClick={handleFullscreen}
-                >
-                  <i className={isFullscreen ? "bx bx-exit-fullscreen" : "bx bx-fullscreen"} />
-                </button>
-                <button
-                  className="header-icons-items btn btn-outline-danger"
-                  title="Logout"
-                  onClick={() => setShowLogoutConfirm(true)}
-                >
-                  <i className="fa-solid fa-right-from-bracket"></i>
-                </button>
               </div>
             </div>
           </nav>
