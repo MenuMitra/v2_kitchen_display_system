@@ -272,7 +272,10 @@ function Header({
                     <button
                       className="header-icons-items btn btn-outline-secondary refresh-btn-heder responsive-header-icon"
                       title="Refresh"
-                      onClick={() => onRefresh?.()}
+                      onClick={(event) => {
+                        onRefresh?.();
+                        event.currentTarget.blur();
+                      }}
                     >
                       <i className="fa-solid fa-rotate" />
                     </button>
