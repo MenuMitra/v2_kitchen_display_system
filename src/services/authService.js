@@ -1,14 +1,12 @@
 import axios from "axios";
-import { API_URL } from "../config";
-
-const BASE_URL = "https://menu4.xyz/v2/common";
+import { V2_COMMON_BASE } from "../config";
 
 export const authService = {
   // Send OTP
   sendOTP: async (mobileNumber) => {
     try {
       const response = await axios.post(
-        `${BASE_URL}/v2/common/login`,
+        `${V2_COMMON_BASE}/login`,
         { mobile: mobileNumber, app_type: "chef" },
         {
           headers: { "Content-Type": "application/json" },
@@ -52,7 +50,7 @@ export const authService = {
 
     try {
       const response = await axios.post(
-        `${BASE_URL}/v2/common/verify_otp`,
+        `${V2_COMMON_BASE}/verify_otp`,
         {
           mobile: mobileNumber,
           otp,

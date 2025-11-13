@@ -3,7 +3,10 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import OutletDropdown from "./OutletDropdown";
 import SubscriptionRemainDay from "./SubscriptionRemainDay";
-import { CURRENT_ENV } from "../config";
+import { ENV } from "../config/env";
+import { V2_COMMON_BASE } from "../config";
+
+console.log("current environment", ENV.env);
 
 function Header({
   filter,
@@ -58,7 +61,7 @@ function Header({
         app_source: "kds_app"
       };
 
-      await fetch("https://menu4.xyz/v2/common/logout", {
+      await fetch(`${V2_COMMON_BASE}/logout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(logoutData),
@@ -173,7 +176,7 @@ function Header({
 
   return (
     <>
-      {!isFullscreen && CURRENT_ENV !== 'production' && (
+      {!isFullscreen && ENV.env !== 'production' && (
         <div
           style={{
             width: "100%",

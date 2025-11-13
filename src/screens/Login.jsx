@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import axios from "axios";
-import { APP_INFO } from "../config"; 
+import { ENV } from "../config/env";
+import { APP_INFO, V2_COMMON_BASE } from "../config"; 
 
 
 function Login() {
@@ -36,7 +37,7 @@ function Login() {
 
     try {
       setLoading(true);
-      const response = await axios.post("https://menu4.xyz/v2/common/login", {
+      const response = await axios.post(`${V2_COMMON_BASE}/login`, {
         mobile: mobileNumber,
         role: ["admin", "chef", "super_owner"],
         app_type: "kds",
@@ -62,7 +63,7 @@ function Login() {
     setError("");
     try {
       setLoading(true);
-      const response = await axios.post("https://menu4.xyz/v2/common/login", {
+      const response = await axios.post(`${V2_COMMON_BASE}/login`, {
         mobile: mobileNumber,
         role: ["admin", "chef", "super_owner"],
         app_type: "kds",
@@ -120,7 +121,7 @@ function Login() {
       const deviceSessId = generateRandomSessionId(20);
       const fcmToken = "dummy_fcm_token";
 
-      const response = await axios.post("https://menu4.xyz/v2/common/verify_otp", {
+      const response = await axios.post(`${V2_COMMON_BASE}/verify_otp`, {
         mobile: mobileNumber,
         otp: otp,
         fcm_token: fcmToken,
