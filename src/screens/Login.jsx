@@ -422,7 +422,7 @@ function Login() {
             <a className="liking-items" href="https://menumitra.com/contact" target="_blank" rel="noopener noreferrer">
               <p style={{ color: "gray" }}>Contact</p>
             </a>
-            <a className="liking-items" href="https://menumitra.com/support" target="_blank" rel="noopener noreferrer">
+            <a className="liking-items" href="https://menumitra.com/customer-care" target="_blank" rel="noopener noreferrer">
               <p style={{ color: "gray" }}>Support</p>
             </a>
           </div>
@@ -432,7 +432,7 @@ function Login() {
             <div className="d-flex flex-column align-items-center justify-content-center">
               
               <div className="kds-socials d-flex justify-content-center gap-1 mb-3">
-                <a href="https://google.com/MenuMitra" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="Google">
+                <a href="https://menumitra.com/" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="Google">
                   <i className="ri-google-fill" />
                 </a>
                 <a href="https://www.facebook.com/people/Menu-Mitra/61565082412478/" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="Facebook">

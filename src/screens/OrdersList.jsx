@@ -420,7 +420,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
   // CircularCountdown component (unchanged except for using updated updateOrderStatus)
   const CircularCountdown = React.memo(({ orderId, order }) => {
-    const [timeLeft, setTimeLeft] = useState(40);
+    const [timeLeft, setTimeLeft] = useState(90);
     const [isExpired, setIsExpired] = useState(false);
     const timerRef = useRef(null);
     const userRole = localStorage.getItem("user_role") || "";
@@ -430,63 +430,38 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         setIsExpired(true);
         return;
       }
-      try {
-        const [day, month, year, time, period] = order.date_time.split(" ");
-        const [hours, minutes, seconds] = time.split(":");
-        let hrs = parseInt(hours, 10);
-        if (period === "PM" && hrs !== 12) hrs += 12;
-        if (period === "AM" && hrs === 12) hrs = 0;
-
-        const months = {
-          Jan: 0,
-          Feb: 1,
-          Mar: 2,
-          Apr: 3,
-          May: 4,
-          Jun: 5,
-          Jul: 6,
-          Aug: 7,
-          Sep: 8,
-          Oct: 9,
-          Nov: 10,
-          Dec: 11,
-        };
-        const orderDate = new Date(
-          parseInt(year, 10),
-          months[month],
-          parseInt(day, 10),
-          hrs,
-          parseInt(minutes, 10),
-          parseInt(seconds, 10)
-        );
-        const expiryTime = orderDate.getTime() + 90 * 1000;
-        const now = Date.now();
-
-        if (expiryTime > now) {
-          const tick = () => {
-            const remaining = Math.max(Math.floor((expiryTime - Date.now()) / 1000), 0);
-            if (remaining <= 0) {
-              setIsExpired(true);
-              clearInterval(timerRef.current);
-              return;
-            }
-            setTimeLeft(remaining);
-          };
-          tick();
-          timerRef.current = setInterval(tick, 1000);
-        } else {
-          setIsExpired(true);
+      
+      // Start countdown from 90 seconds immediately
+      setTimeLeft(90);
+      setIsExpired(false);
+      
+      const tick = () => {
+        setTimeLeft((prev) => {
+          const next = prev - 1;
+          if (next <= 0) {
+            setIsExpired(true);
+            clearInterval(timerRef.current);
+            return 0;
+          }
+          return next;
+        });
+      };
+      
+      // Start the countdown immediately
+      timerRef.current = setInterval(tick, 1000);
+      
+      return () => {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
         }
-      } catch (error) {
-        console.error("Error in countdown:", error);
-        setIsExpired(true);
-      }
-      return () => timerRef.current && clearInterval(timerRef.current);
+      };
     }, [orderId, order?.date_time]);
 
     if (isExpired) return null;
 
-    const percentage = (timeLeft / 90) * 100;
+    // Clamp timeLeft to ensure percentage stays within 0-100% range
+    const clampedTimeLeft = Math.min(Math.max(timeLeft, 0), 90);
+    const percentage = (clampedTimeLeft / 90) * 100;
 
     const handleRejectOrder = async () => {
       if (userRole === "super_owner") return;
