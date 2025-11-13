@@ -147,7 +147,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     <div
       ref={dropdownRef}
       className="relative inline-block responsive-outlet-dropdown-wrapper"
-      style={{ position: "relative", borderRadius: "3px", width: "100%", maxWidth: "220px", minWidth: "120px" }}
+      style={{ position: "relative", borderRadius: "3px", width: "100%", maxWidth: "420px", minWidth: "300px" }}
     >
       <button
         type="button"
