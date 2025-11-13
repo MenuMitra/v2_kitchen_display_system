@@ -1,7 +1,7 @@
 // Centralized environment configuration for API and WebSocket endpoints
 
 // SINGLE SWITCH: change this to 'production' | 'testing' | 'development'
-const CURRENT_ENV = 'production';
+const CURRENT_ENV = 'testing';
 
 // Host configuration per environment
 const CONFIG = {
