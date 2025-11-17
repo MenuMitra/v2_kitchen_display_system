@@ -6,12 +6,12 @@ const CURRENT_ENV = 'testing';
 // Host configuration per environment
 const CONFIG = {
   production: {
-    API_HOST: 'https://ghanish.in',
-    WS_URL: 'wss://ghanish.in/ws/database-updates',
+    API_HOST: 'https://menu4.xyz',
+    WS_URL: 'wss://menu4.xyz/ws/database-updates',
   },
   testing: {
-    API_HOST: 'https://men4u.xyz',
-    WS_URL: 'wss://men4u.xyz/ws/database-updates',
+    API_HOST: 'https://ghanish.in',
+    WS_URL: 'wss://ghanish.in/ws/database-updates',
   },
   development: {
     API_HOST: 'https://men4u.xyz',
