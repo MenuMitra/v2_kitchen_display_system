@@ -10,8 +10,8 @@ const CONFIG = {
     WS_URL: 'wss://menu4.xyz/ws/database-updates',
   },
   testing: {
-    API_HOST: 'https://ghanish.in',
-    WS_URL: 'wss://ghanish.in/ws/database-updates',
+    API_HOST: 'https://menusmitra.xyz',
+    WS_URL: 'wss://menusmitra.xyz/ws/database-updates',
   },
   development: {
     API_HOST: 'https://men4u.xyz',
