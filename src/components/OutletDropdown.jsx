@@ -113,30 +113,8 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
 
   if (hideDropdown && selected) {
     return (
-      <div
-        className="inline-block responsive-outlet-display"
-        style={{ position: "relative", borderRadius: "3px", width: "100%", maxWidth: "180px" }}
-      >
-        <div
-          className="selected-outlet-label"
-          style={{
-            background: "#fff",
-            color: "#000",
-            fontSize: "clamp(0.875rem, 2vw, 1.12rem)",
-            fontWeight: "500",
-            padding: "0.32rem 0.75rem",
-            border: "1.5px solid #d0d5dd",
-            borderRadius: "15px",
-            minHeight: "40px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "left",
-            cursor: "default",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
+      <div className="inline-block relative w-full max-w-[180px] rounded-3xl">
+        <div className="bg-white text-black font-medium px-3 py-1 border-[1.5px] border-[#d0d5dd] rounded-3xl min-h-[40px] flex items-center justify-start cursor-default overflow-hidden whitespace-nowrap text-ellipsis text-[clamp(0.875rem,2vw,1.12rem)]">
           {selectedLabel}
         </div>
       </div>
@@ -146,62 +124,22 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   return (
     <div
       ref={dropdownRef}
-      className="relative inline-block responsive-outlet-dropdown-wrapper"
-      style={{ position: "relative", borderRadius: "3px", width: "100%", maxWidth: "420px", minWidth: "300px" }}
+      className="relative inline-block w-full max-w-[420px] min-w-[120px] sm:min-w-[300px] rounded-3xl"
     >
       <button
         type="button"
         onClick={() => setShow((s) => !s)}
-        className="w-100 select-outlet-btn"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "#fff",
-          color: "#b4b6b9ff",
-          fontSize: "clamp(0.875rem, 2vw, 1.12rem)",
-          fontWeight: "500",
-          padding: "0.32rem 0.75rem",
-          border: "1.5px solid #d0d5dd",
-          borderRadius: "15px",
-          minHeight: "40px",
-          textAlign: "left",
-          boxShadow: "none",
-          outline: "none",
-          cursor: "pointer",
-          transition: "background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = "#e6e6e6";
-          e.currentTarget.style.color = "#939090ff";
-          e.currentTarget.style.borderColor = "#dcd8d8ff";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = "#fff";
-          e.currentTarget.style.color = "#a5a6a9ff";
-          e.currentTarget.style.borderColor = "#d0d5dd";
-        }}
+        className="w-full flex items-center justify-between bg-white text-[#b4b6b9] font-medium px-3 py-1 border-[1.5px] border-[#d0d5dd] rounded-3xl min-h-[40px] text-left shadow-none outline-none cursor-pointer transition-all duration-300 overflow-hidden whitespace-nowrap text-ellipsis text-[clamp(0.875rem,2vw,1.12rem)] hover:bg-[#e6e6e6] hover:text-[#939090] hover:border-[#dcd8d8]"
       >
         <span>{selectedLabel}</span>
         <span
-          style={{
-            display: "inline-block",
-            width: "24px",
-            height: "24px",
-            verticalAlign: "middle",
-            margin: "2px",
-            transition: "transform 0.3s ease",
-            transform: show ? "rotate(180deg)" : "rotate(0deg)",
-          }}
+          className={`inline-block w-6 h-6 align-middle m-[2px] transition-transform duration-300 ${show ? "rotate-180" : "rotate-0"}`}
         >
           <svg
             width="24"
             height="24"
             viewBox="0 0 24 24"
-            style={{ display: "block" }}
+            className="block"
             xmlns="http://www.w3.org/2000/svg"
           >
             <polyline
@@ -217,80 +155,52 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       </button>
 
       {show && (
-        <div
-          className="dropdown-menu show shadow overflow-hidden responsive-outlet-dropdown-menu"
-          style={{ 
-            maxHeight: "290px", 
-            minWidth: "200px", 
-            maxWidth: "300px", 
-            width: "100%",
-            overflowY: "auto", 
-            backgroundColor: "#d1d3d4",
-            position: "absolute",
-            zIndex: 1000,
-            top: "100%",
-            left: 0,
-            marginTop: "0.25rem"
-          }}
-        >
+        <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] max-w-[300px] max-h-[290px] overflow-y-auto bg-[#d1d3d4] z-[1000] shadow rounded overflow-hidden">
           <div className="p-2">
             <input
               type="search"
-              className="form-control form-control-sm responsive-outlet-search"
-              style={{ fontSize: "clamp(0.875rem, 2vw, 1.125rem)", height: "2.5rem" }}
+              className="w-full h-10 px-3 py-1.5 text-[clamp(0.875rem,2vw,1.125rem)] border border-gray-300 rounded-3xl focus:outline-none focus:border-blue-500"
               placeholder="Search outlets..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <ul
-            className="list-unstyled mb-0"
-            style={{ maxHeight: 250, overflowY: "auto", paddingLeft: 0 }}
-          >
-            {loading && <li className="dropdown-item">Loading...</li>}
+          <ul className="list-none m-0 p-0 max-h-[250px] overflow-y-auto [&::-webkit-scrollbar]:hidden">
+            {loading && <li className="px-4 py-2 text-gray-700">Loading...</li>}
             {!loading &&
               filteredOutlets.map((outlet, index) => {
                 const isInactive = outlet && outlet.outlet_status === false;
                 const isSelected = selected && selected.outlet_id === outlet.outlet_id;
                 return (
-                  <li className="outlet-list-items p-1 m-1" key={`${outlet.outlet_id}-${index}`}>
+                  <li className="p-1 m-1 border-[1.5px] border-[#bbb] rounded-[10px] bg-[#f8f9fa] hover:bg-white hover:border-[#0d6efd] hover:shadow-[0_4px_16px_rgba(13,110,253,0.18)] transition-all duration-150" key={`${outlet.outlet_id}-${index}`}>
                     <button
                       type="button"
-                      className={`dropdown-item-outlet w-100 p-1 m-0 ${
-                        isSelected ? "font-bold text-gray-800 bg-blue-100" : "text-dark"
-                      } ${isInactive ? "cursor-not-allowed" : ""}`}
+                      className={`w-full p-1 m-0 text-left whitespace-normal border-none bg-transparent rounded-lg text-base ${isSelected ? "font-bold text-gray-800 bg-blue-100" : "text-gray-800"
+                        } ${isInactive ? "cursor-not-allowed bg-[#ffe6e6] text-[#a30000] opacity-90" : ""}`}
                       onClick={() => handleSelect(outlet)}
                       disabled={isInactive}
-                      style={{
-                        borderRadius: 8,
-                        textAlign: "left",
-                        whiteSpace: "normal",
-                        backgroundColor: isInactive ? "#ffe6e6" : undefined,
-                        color: isInactive ? "#a30000" : undefined,
-                        opacity: isInactive ? 0.9 : 1,
-                      }}
                     >
-                      <div className="d-flex align-items-center">
-                        <p className="text-capitalize m-0 p-0 text-wrap" style={{ flex: 1, whiteSpace: "normal", wordBreak: "break-word" }}>{outlet.name}</p>
+                      <div className="flex items-center">
+                        <p className="capitalize m-0 p-0 flex-1 whitespace-normal break-words">{outlet.name}</p>
                         {isInactive && (
-                          <span className="text-xs ms-2" style={{ color: "#a30000", fontWeight: 600 }}>
+                          <span className="text-xs ml-2 text-[#a30000] font-semibold">
                             Inactive
                           </span>
                         )}
                         {outlet.outlet_code && (
-                          <span className="text-xs text-secondary ms-1">({outlet.outlet_code})</span>
+                          <span className="text-xs text-gray-500 ml-1">({outlet.outlet_code})</span>
                         )}
                       </div>
-                      {outlet.address && <div className="text-xs text-muted">{outlet.address}</div>}
+                      {outlet.address && <div className="text-xs text-gray-500">{outlet.address}</div>}
                       {outlet.owner_name && (
-                        <div className="text-xs text-secondary">{outlet.owner_name}</div>
+                        <div className="text-xs text-gray-500">{outlet.owner_name}</div>
                       )}
                     </button>
                   </li>
                 );
               })}
             {!loading && filteredOutlets.length === 0 && (
-              <li className="dropdown-item text-center text-muted">No outlets found</li>
+              <li className="px-4 py-2 text-center text-gray-500">No outlets found</li>
             )}
           </ul>
         </div>

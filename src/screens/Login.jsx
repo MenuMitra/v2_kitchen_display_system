@@ -5,7 +5,6 @@ import axios from "axios";
 import { ENV } from "../config/env";
 import { APP_INFO, V2_COMMON_BASE } from "../config"; 
 
-
 function Login() {
   const [mobileNumber, setMobileNumber] = useState("");
   const [loading, setLoading] = useState(false);
@@ -155,144 +154,33 @@ function Login() {
     }
   };
 
-  // Add responsive styles
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = `
-      /* Mobile devices (max-width: 575.98px) */
-      @media (max-width: 575.98px) {
-        .responsive-login-card {
-          min-width: 100% !important;
-          max-width: 100% !important;
-          padding: 0.75rem !important;
-        }
-        .responsive-login-logo {
-          width: 32px !important;
-          height: 32px !important;
-        }
-        .responsive-login-brand-text {
-          font-size: 1.25rem !important;
-        }
-        .responsive-login-title {
-          font-size: 1rem !important;
-        }
-        .responsive-login-subtitle {
-          font-size: 0.875rem !important;
-        }
-        .responsive-login-form-container {
-          padding-left: 0.5rem !important;
-          padding-right: 0.5rem !important;
-        }
-        .responsive-otp-container {
-          gap: 0.5rem !important;
-        }
-        .responsive-otp-input {
-          width: 50px !important;
-          height: 50px !important;
-          font-size: 1.25rem !important;
-        }
-        .responsive-otp-buttons {
-          flex-direction: column !important;
-          gap: 0.5rem !important;
-          margin-left: 0 !important;
-          margin-right: 0 !important;
-          padding: 0 0.5rem !important;
-        }
-        .responsive-otp-button {
-          width: 100% !important;
-          text-align: center !important;
-          font-size: 0.875rem !important;
-        }
-        .responsive-error-container {
-          max-width: 100% !important;
-          padding: 8px 10px !important;
-          font-size: 0.875rem !important;
-        }
-        .responsive-links-container {
-          flex-wrap: wrap !important;
-          gap: 0.5rem !important;
-        }
-        .responsive-links-container p {
-          font-size: 0.75rem !important;
-          margin: 0 !important;
-        }
-        .responsive-submit-button {
-          height: 42px !important;
-          font-size: 0.95rem !important;
-        }
-      }
-      
-      /* Tablet devices (576px - 991.98px) */
-      @media (min-width: 576px) and (max-width: 991.98px) {
-        .responsive-login-card {
-          min-width: 90% !important;
-          max-width: 600px !important;
-        }
-        .responsive-login-logo {
-          width: 36px !important;
-          height: 36px !important;
-        }
-        .responsive-login-brand-text {
-          font-size: 1.5rem !important;
-        }
-        .responsive-login-title {
-          font-size: 1.25rem !important;
-        }
-        .responsive-otp-input {
-          width: 60px !important;
-          height: 60px !important;
-          font-size: 1.5rem !important;
-        }
-        .responsive-otp-buttons {
-          margin-left: 2rem !important;
-          margin-right: 2rem !important;
-        }
-        .responsive-error-container {
-          max-width: 90% !important;
-        }
-      }
-      
-      /* Desktop devices (min-width: 992px) */
-      @media (min-width: 992px) {
-        .responsive-login-card {
-          min-width: 550px !important;
-          max-width: 800px !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
   return (
     <>
-      <div className="container">
-        <div className="card-login-page-main d-flex flex-column align-items-center justify-content-center responsive-login-card">
-          <div className="login-card-main-box">
-            <div className="app-brand justify-content-center ">
-              <Link to="/" className="d-flex flex-column app-brand-link" style={{ textDecoration: "none" }}>
-                <span className="app-brand-logo demo">
-                  <img src={logo} alt="MenuMitra" className="responsive-login-logo" style={{ width: "40px", height: "40px" }} />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f7f8fc] p-4">
+        <div className="w-full max-w-md sm:max-w-lg lg:max-w-2xl bg-white rounded-2xl shadow-[0_4px_16px_0_rgba(0,0,0,0.12)] p-6 sm:p-8 lg:p-10 border border-gray-300 mt-10">
+          <div className="flex flex-col items-center justify-center">
+            <div className="flex justify-center mb-4">
+              <Link to="/" className="flex flex-col items-center no-underline">
+                <span className="flex items-center justify-center">
+                  <img src={logo} alt="MenuMitra" className="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
                 </span>
-                <span className="app-brand-text demo text-heading fw-semibold mt-3 responsive-login-brand-text">MenuMitra</span>
+                <span className="text-2xl sm:text-3xl font-semibold text-gray-800 mt-3">MenuMitra</span>
               </Link>
             </div>
-            <div className="d-flex flex-column justify-content-center align-items-center mt-2">
-              <span className="app-brand-text demo text-heading fw-semibold text-center pt-3 responsive-login-title">Kitchen Display System</span>
-              <p className="mt-3 pb-1 responsive-login-subtitle" style={{ color: "gray" }}>Sign in to continue to your account</p>
+            <div className="flex flex-col justify-center items-center mt-2 text-center">
+              <span className="text-xl sm:text-2xl font-semibold text-gray-800">Kitchen Display System</span>
+              <p className="mt-3 pb-1 text-gray-500 text-sm sm:text-base">Sign in to continue to your account</p>
             </div>
-            <div>
-              <form id="formAuthentication" className="mb-3 form-container-login fv-plugins-bootstrap5 fv-plugins-framework" onSubmit={showOtpInput ? handleVerifyOTP : handleSendOTP} noValidate="novalidate">
+            <div className="w-full mt-4">
+              <form id="formAuthentication" className="mb-3 w-full" onSubmit={showOtpInput ? handleVerifyOTP : handleSendOTP} noValidate>
                 {!showOtpInput ? (
-                  <div className="form-floating form-floating-outline mb-3 form-control-validation fv-plugins-icon-container responsive-login-form-container px-md-4">
+                  <div className="mb-3 w-full px-0 sm:px-4">
                     <div>
-                      <label htmlFor="mobile">Mobile Number <span className="red-asterisk">*</span></label>
+                      <label htmlFor="mobile" className="block text-gray-700 font-medium mb-1">Mobile Number <span className="text-red-500">*</span></label>
                     </div>
                     <input
                       type="text"
-                      className="form-control-login-form mt-2"
+                      className="w-full h-[45px] px-3 py-2 text-lg border border-gray-800 rounded-3xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400"
                       id="mobile"
                       name="mobile"
                       placeholder="Enter your mobile number"
@@ -310,40 +198,29 @@ function Login() {
                       autoFocus
                     />
                     
-                    {error && <p className="text-danger" role="alert">{error}</p>}
+                    {error && <p className="text-red-500 text-sm mt-1" role="alert">{error}</p>}
                     
                   </div>
                 ) : (
                   <>
                     {error && (
-                      <div
-                        className="d-flex justify-content-center px-2"
-                      >
+                      <div className="flex justify-center px-2 mb-4">
                         <div
                           role="alert"
-                          className="mb-2 text-center responsive-error-container"
-                          style={{
-                            maxWidth: "420px",
-                            width: "100%",
-                            background: "#f8d7da", // light red background
-                            color: "#842029", // dark red text
-                            border: "1px solid #f5c2c7",
-                            borderRadius: "8px",
-                            padding: "10px 12px",
-                          }}
+                          className="w-full max-w-[420px] bg-red-100 text-red-800 border border-red-200 rounded-lg px-3 py-2 text-center text-sm"
                         >
                           {error}
                         </div>
                       </div>
                     )}
-                    <div className="text-center mt-2 mb-3">Enter 4-digit Verification code </div>
-                    <div className="d-flex justify-content-center responsive-otp-container gap-3 mb-3 px-2">
+                    <div className="text-center mt-2 mb-3 text-gray-700">Enter 4-digit Verification code </div>
+                    <div className="flex justify-center gap-3 mb-3 px-2">
                       {otpValues.map((value, index) => (
                         <input
                           key={index}
                           ref={otpRefs[index]}
                           type="text"
-                          className="form-control text-center input-element-login responsive-otp-input"
+                          className="w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] text-center text-xl sm:text-2xl border border-gray-300 rounded-3xl focus:outline-none focus:ring-2 focus:ring-primary"
                           value={value}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(index, e)}
@@ -355,29 +232,17 @@ function Login() {
                     </div>
                   
 
-                    <div className="d-flex justify-content-between align-items-center responsive-otp-buttons px-2 px-md-0" style={{ width: "100%" }}>
+                    <div className="flex flex-col sm:flex-row justify-between align-items-center w-full px-2 sm:px-8 mb-4 gap-2 sm:gap-0">
                       <button
                         type="button"
                         onClick={handleResendOTP}
                         disabled={resendCooldown > 0}
-                        className="text-base font-medium focus:outline-none focus:underline mb-3 mt-2 responsive-otp-button"
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          padding: 0,
-                          color: resendCooldown > 0 ? 'gray' : '#2563eb', // Gray when disabled, blue otherwise
-                        }}
+                        className={`text-base font-medium rounded-3xl focus:outline-none hover:underline bg-transparent border-none p-0 ${resendCooldown > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 cursor-pointer'}`}
                       >
                         {resendCooldown > 0 ? `Resend OTP (${resendCooldown}s)` : "Resend OTP"}
                       </button>
                       <button
-                        className="text-base font-medium focus:outline-none focus:underline mb-3 responsive-otp-button"
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          padding: 0,
-                          color: '#2563eb' // Always blue color here
-                        }}
+                        className="text-base font-medium rounded-3xl focus:outline-none hover:underline bg-transparent border-none p-0 text-blue-600 cursor-pointer"
                         type="button"
                         onClick={() => {
                           setShowOtpInput(false);
@@ -392,18 +257,17 @@ function Login() {
                   </>
                 )}
 
-                <div className="mb-3 responsive-login-form-container px-md-4">
+                <div className="mb-3 w-full px-0 sm:px-4">
                   <button
-                    className={`btn mb-3 d-grid w-100 waves-effect waves-light responsive-submit-button ${
+                    className={`w-full h-[45px] rounded-3xl text-white font-medium transition-colors duration-200 ${
                       showOtpInput
-                        ? "bg-primary text-white"
+                        ? "bg-primary hover:bg-blue-700"
                         : mobileNumber.length === 10
-                        ? "bg-primary text-white"
-                        : "bg-secondary text-white"
+                        ? "bg-primary hover:bg-blue-700"
+                        : "bg-secondary cursor-not-allowed"
                     }`}
                     type="submit"
-                    disabled={!showOtpInput && mobileNumber.length !== 10} // disable if Send OTP mode and not 10 digits
-                    style={{ height: "45px", borderRadius: "10px" }}
+                    disabled={!showOtpInput && mobileNumber.length !== 10} 
                   >
                     {showOtpInput ? "Verify OTP" : "Send OTP"}
                   </button>
@@ -413,40 +277,40 @@ function Login() {
             </div>
           </div>
 
-          <div className="d-flex justify-content-center gap-1 mt-2 links-container responsive-links-container">
-            <a className="liking-items" href="https://menumitra.com/" target="_blank" rel="noopener noreferrer">
-              <p style={{ color: "gray" }}>Home</p>
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-4 border-b border-gray-300 pb-4 mb-4">
+            <a className="text-gray-500 hover:text-gray-700 no-underline text-sm sm:text-base" href="https://menumitra.com/" target="_blank" rel="noopener noreferrer">
+              Home
             </a>
-            <a className="liking-items" href="https://menumitra.com/book-demo" target="_blank" rel="noopener noreferrer">
-              <p style={{ color: "gray" }}>Book a demo</p>
+            <a className="text-gray-500 hover:text-gray-700 no-underline text-sm sm:text-base" href="https://menumitra.com/book-demo" target="_blank" rel="noopener noreferrer">
+              Book a demo
             </a>
-            <a className="liking-items" href="https://menumitra.com/contact" target="_blank" rel="noopener noreferrer">
-              <p style={{ color: "gray" }}>Contact</p>
+            <a className="text-gray-500 hover:text-gray-700 no-underline text-sm sm:text-base" href="https://menumitra.com/contact" target="_blank" rel="noopener noreferrer">
+              Contact
             </a>
-            <a className="liking-items" href="https://menumitra.com/customer-care" target="_blank" rel="noopener noreferrer">
-              <p style={{ color: "gray" }}>Support</p>
+            <a className="text-gray-500 hover:text-gray-700 no-underline text-sm sm:text-base" href="https://menumitra.com/customer-care" target="_blank" rel="noopener noreferrer">
+              Support
             </a>
           </div>
 
-          <div className="card-body pt-2">
-            <div className="d-flex flex-column align-items-center justify-content-center">
+          <div className="pt-2">
+            <div className="flex flex-col items-center justify-center">
               
-              <div className="kds-socials d-flex justify-content-center gap-1 mb-3">
-                <a href="https://menumitra.com/" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="Google">
+              <div className="flex justify-center gap-3 mb-3">
+                <a href="https://menumitra.com/" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl hover:text-blue-500 hover:border-blue-500 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="Google">
                   <i className="ri-google-fill" />
                 </a>
-                <a href="https://www.facebook.com/people/Menu-Mitra/61565082412478/" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                <a href="https://www.facebook.com/people/Menu-Mitra/61565082412478/" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl hover:text-blue-600 hover:border-blue-600 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
                   <i className="ri-facebook-fill" />
                 </a>
-                <a href="https://www.instagram.com/menumitra/" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                <a href="https://www.instagram.com/menumitra/" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl hover:text-pink-600 hover:border-pink-600 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
                   <i className="ri-instagram-fill" />
                 </a>
-                <a href="https://www.youtube.com/@menumitra" className="kds-social" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+                <a href="https://www.youtube.com/@menumitra" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl hover:text-red-600 hover:border-red-600 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
                   <i className="ri-youtube-fill" />
                 </a>
                
               </div>
-              <div className="kds-version text-center">
+              <div className="text-center text-gray-500 text-xs sm:text-sm">
                 Version {APP_INFO.version} <span className="mx-2">|</span> {APP_INFO.releaseDate}
               </div>
             </div>

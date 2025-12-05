@@ -12,82 +12,6 @@ import Header from "../components/Header";
 import { useQuery } from "@tanstack/react-query";
 import { V2_COMMON_BASE, COMMON_API_BASE } from "../config";
 
-const styles = `
-  .circular-countdown {
-    position: relative;
-    width: 40px;
-    height: 40px;
-    margin: 0 auto;
-  }
-  .circular-timer { transform: rotate(-90deg); width: 100%; height: 100%; }
-  .timer-text-overlay {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%); font-size: 12px; font-weight: bold;
-  }
-  .font_size_14 { font-size: 14px; }
-  .font_size_12 { font-size: 12px; }
-  .menu-item-text { font-size: 18px !important; }
-  .menu-items-scroll {
-    max-height: 400px;
-    overflow-y: auto;
-    padding-right: 2px;
-  }
-  .menu-items-scroll::-webkit-scrollbar {
-    width: 4px;
-  }
-  .menu-items-scroll::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 2px;
-  }
-  .menu-items-scroll::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 2px;
-  }
-  .menu-items-scroll::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
-  
-  /* Responsive Styles */
-  @media (max-width: 575.98px) {
-    .menu-item-text { font-size: 14px !important; }
-    .menu-items-scroll { max-height: 250px; }
-    .circular-countdown { width: 32px; height: 32px; }
-    .timer-text-overlay { font-size: 10px; }
-    .responsive-header-text { font-size: 1rem !important; }
-    .responsive-order-card { margin-bottom: 0.75rem; }
-    .responsive-order-number { font-size: 1.25rem !important; }
-    .responsive-order-info { font-size: 0.875rem !important; }
-    .responsive-menu-name { font-size: 0.875rem !important; }
-    .responsive-menu-size { font-size: 0.75rem !important; }
-    .responsive-menu-quantity { font-size: 0.875rem !important; }
-    .responsive-serve-btn { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-    .responsive-complete-btn { padding: 0.5rem; font-size: 0.875rem; }
-    .responsive-refresh-text { font-size: 0.75rem; }
-  }
-  
-  @media (min-width: 576px) and (max-width: 991.98px) {
-    .menu-item-text { font-size: 16px !important; }
-    .menu-items-scroll { max-height: 350px; }
-    .responsive-header-text { font-size: 1.5rem !important; }
-    .responsive-order-number { font-size: 1.5rem !important; }
-    .responsive-order-info { font-size: 1rem !important; }
-    .responsive-menu-name { font-size: 1rem !important; }
-    .responsive-menu-size { font-size: 0.875rem !important; }
-    .responsive-menu-quantity { font-size: 1rem !important; }
-  }
-  
-  @media (min-width: 992px) {
-    .menu-item-text { font-size: 18px !important; }
-    .menu-items-scroll { max-height: 400px; }
-    .responsive-header-text { font-size: 2rem !important; }
-    .responsive-section-header { border-radius: 1rem !important; }
-    .responsive-order-card { border-radius: 0.75rem !important; }
-  }
-`;
-const styleSheet = document.createElement("style");
-styleSheet.innerText = styles;
-document.head.appendChild(styleSheet);
-
 const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const navigate = useNavigate();
   const userRole = localStorage.getItem("user_role") || "";
@@ -512,7 +436,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     }
   }, [accessToken, userId, deviceId, navigate]);
 
-  // CircularCountdown component (unchanged except for using updated updateOrderStatus)
+  // CircularCountdown component
   const CircularCountdown = React.memo(({ orderId, order }) => {
     const [timeLeft, setTimeLeft] = useState(90);
     const [isExpired, setIsExpired] = useState(false);
@@ -524,11 +448,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         setIsExpired(true);
         return;
       }
-      
+
       // Start countdown from 90 seconds immediately
       setTimeLeft(90);
       setIsExpired(false);
-      
+
       const tick = () => {
         setTimeLeft((prev) => {
           const next = prev - 1;
@@ -540,10 +464,10 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
           return next;
         });
       };
-      
+
       // Start the countdown immediately
       timerRef.current = setInterval(tick, 1000);
-      
+
       return () => {
         if (timerRef.current) {
           clearInterval(timerRef.current);
@@ -592,9 +516,9 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     };
 
     return (
-      <div className="d-flex align-items-center gap-2">
-        <div className="circular-countdown">
-          <svg viewBox="0 0 36 36" className="circular-timer">
+      <div className="flex items-center gap-2">
+        <div className="relative w-10 h-10 sm:w-8 sm:h-8 mx-auto">
+          <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
             <path
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               fill="none"
@@ -609,10 +533,10 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
               strokeDasharray={`${percentage}, 100`}
             />
           </svg>
-          <div className="timer-text-overlay text-dark">{timeLeft}s</div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs sm:text-[10px] font-bold text-gray-800">{timeLeft}s</div>
         </div>
         {userRole !== "super_owner" && order.kds_button_enabled === 1 && (
-          <button className="btn btn-danger btn-sm" onClick={handleRejectOrder}>
+          <button className="px-2 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors" onClick={handleRejectOrder}>
             Reject
           </button>
         )}
@@ -636,7 +560,17 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
       return orders.map((order) => {
         const prevMenuItems = previousMenuItems[order.order_id] || [];
-        const cssType = type === "placed" ? "secondary" : type;
+        // Map type to Tailwind colors
+        let borderColorClass = "border-[#6c757d]";
+        let bgOpacityClass = "bg-gray-500/10";
+
+        if (type === "warning") {
+          borderColorClass = "border-[#ffc107]";
+          bgOpacityClass = "bg-yellow-500/10";
+        } else if (type === "success") {
+          borderColorClass = "border-[#198754]";
+          bgOpacityClass = "bg-green-500/10";
+        }
 
         // Filter menus per section
         let visibleMenus = Array.isArray(order.menu_details) ? order.menu_details : [];
@@ -664,35 +598,28 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         if (!visibleMenus.length) return null;
 
         return (
-          <div className="col-12" key={order.order_id}>
+          <div className="w-full" key={order.order_id}>
             <div
-              className="card bg-white rounded-2 responsive-order-card"
-              style={{
-                height: "auto",
-                minHeight: "unset",
-                display: "inline-block",
-                width: "100%",
-              }}
+              className="bg-white rounded-lg shadow h-auto w-full inline-block overflow-hidden"
             >
-              <div className={`bg-${cssType} bg-opacity-10 py-2 py-md-2`}>
-                <div className="d-flex justify-content-between align-items-center flex-wrap gap-1 gap-md-0">
-                  <p className="fs-4 fs-md-3 fw-bold mb-0 order-tables-orders responsive-order-number">
-                    <i className="bx bx-hash"></i>{order.order_number}
+              <div className={`${bgOpacityClass} py-2 md:py-2 px-3`}>
+                <div className="flex justify-between items-center flex-wrap gap-1 md:gap-0">
+                  <p className="text-xl md:text-2xl font-bold mb-0 flex items-center">
+                    <i className="bx bx-hash mr-1"></i>{order.order_number}
                   </p>
-                  <p className="mb-0 fs-6 fs-md-5 text-capitalize fw-semibold order-tables-orders-number responsive-order-info">
+                  <p className="mb-0 text-base md:text-xl capitalize font-semibold">
                     {order.section_name
                       ? order.section_name
-                      : `${order.order_type}${
-                          order.table_number?.length
-                            ? ` - ${order.table_number.join(", ")}`
-                            : ""
-                        }`}
+                      : `${order.order_type}${order.table_number?.length
+                        ? ` - ${order.table_number.join(", ")}`
+                        : ""
+                      }`}
                   </p>
                 </div>
               </div>
-              <div className="card-body p-1">
+              <div className="p-1">
                 {Array.isArray(visibleMenus) && (
-                  <div className={visibleMenus.length > 6 ? "menu-items-scroll" : ""}>
+                  <div className={visibleMenus.length > 6 ? "overflow-y-auto pr-[2px] max-h-[250px] sm:max-h-[350px] lg:max-h-[400px] [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-track]:bg-[#f1f1f1] [&::-webkit-scrollbar-track]:rounded-[2px] [&::-webkit-scrollbar-thumb]:bg-[#888] [&::-webkit-scrollbar-thumb]:rounded-[2px] hover:[&::-webkit-scrollbar-thumb]:bg-[#555]" : ""}>
                     {visibleMenus.map((menu, index) => {
                       const isNewItem =
                         prevMenuItems.length > 0 &&
@@ -703,41 +630,32 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
                       return (
                         <div
-                          className={`d-flex flex-wrap justify-content-between align-items-center border-${cssType} border-3 ps-2 mb-2`}
+                          className={`flex flex-wrap justify-between items-center ${type === "placed" ? "border-l-[3px]" : ""} pl-2 mb-2 ${borderColorClass}`}
                           key={index}
-                          style={{ margin: "0px", padding: "0px" }}
+
                         >
                           <div
-                            className={`d-flex fw-semibold text-capitalize menu-item-text ${
-                              isNewItem ? "text-danger" : ""
-                            }`}
-                            style={{ alignItems: "center", flex: "1 1 auto", minWidth: "120px" }}
+                            className={`flex font-semibold capitalize items-center flex-auto min-w-[120px] text-[14px] sm:text-[14px] md:text-[16px] lg:text-[18px] ${isNewItem ? "text-red-500" : ""
+                              }`}
                           >
                             <hr
-                              className="responsive-menu-indicator"
+                              className="h-[20px] w-[3px] mr-[5px] p-0 border-0"
                               style={{
-                                height: "20px",
                                 backgroundColor: hrColor,
-                                border: "none",
-                                width: "3px",
-                                margin: "0 5px 0 0",
-                                padding: "0px",
                               }}
                             />
-                            <p className="mb-0 responsive-menu-name">{menu.menu_name}</p>
+                            <p className="mb-0 p-0">{menu.menu_name}</p>
                           </div>
                           <div
-                            className={`fw-semibold text-capitalize menu-item-text responsive-menu-size ${
-                              isNewItem ? "text-danger" : ""
-                            }`}
+                            className={`font-semibold capitalize text-[12px] sm:text-[12px] md:text-[14px] lg:text-[18px] ${isNewItem ? "text-red-500" : ""
+                              }`}
                           >
                             {menu.half_or_full}
                           </div>
                           <div
-                            className="d-flex align-items-center text-end gap-1 gap-md-2 responsive-menu-actions"
-                            style={{ paddingRight: "10px" }}
+                            className="flex items-center text-right gap-1 md:gap-2 pr-2.5"
                           >
-                            <span className="fw-semibold menu-item-text responsive-menu-quantity">
+                            <span className="font-semibold text-[14px] sm:text-[14px] md:text-[16px] lg:text-[18px]">
                               × {menu.quantity}
                             </span>
                             {manualMode &&
@@ -745,18 +663,17 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                               !isSuperOwner &&
                               order.kds_button_enabled === 1 && (
                                 <button
-                                  className="btn btn-sm btn-success responsive-serve-btn"
+                                  className="px-2 py-1 text-xs sm:text-xs bg-green-800 text-white rounded hover:bg-green-600 transition-colors"
                                   onClick={() => handleServeMenuItem(order.order_id, menu)}
                                 >
-                                  <span className="d-none d-sm-inline">Served</span>
-                                  <span className="d-sm-none">✓</span>
+                                  <span className="hidden sm:inline">Served</span>
+                                  <span className="sm:hidden">✓</span>
                                 </button>
                               )}
                           </div>
                           {menu.comment && (
                             <div
-                              className="w-100 text-start text-muted"
-                              style={{ fontSize: "0.75rem" }}
+                              className="w-full text-left text-gray-500 text-xs"
                             >
                               <span>{menu.comment}</span>
                             </div>
@@ -770,17 +687,17 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                 {/* Only show Complete Order button if kds_button_enabled = 1 */}
                 {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
                   <button
-                    className="btn btn-success w-100 responsive-complete-btn"
+                    className="w-full py-2 bg-green-800 text-white rounded hover:bg-green-600 transition-colors text-sm md:text-base font-medium mt-2"
                     onClick={() => updateOrderStatus(order.order_id, "served")}
                   >
-                    <span className="d-none d-sm-inline">Complete Order</span>
-                    <span className="d-sm-none">Complete</span>
+                    <span className="hidden sm:inline">Complete Order</span>
+                    <span className="sm:hidden">Complete</span>
                   </button>
                 )}
 
                 {/* Render countdown */}
                 {manualMode && order.order_status === "placed" && !isSuperOwner && (
-                  <div className="d-flex justify-content-end mt-2">
+                  <div className="flex justify-end mt-2">
                     <CircularCountdown orderId={order.order_id} order={order} />
                   </div>
                 )}
@@ -796,7 +713,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const outletName = localStorage.getItem("outlet_name");
 
   return (
-    <div className="min-vh-100 d-flex flex-column bg-light">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header
         outletName={localStorage.getItem("outlet_name") || ""}
         filter={filter}
@@ -808,40 +725,40 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         subscriptionData={subscriptionData}
       />
       {!outletName ? (
-        <div className="d-flex flex-column min-vh-100 justify-content-between">
+        <div className="flex flex-col min-h-screen justify-between">
           <div>
-            <div className="alert alert-warning text-center mb-0 rounded-0">
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 text-center mb-0">
               Please select an outlet to view orders.
             </div>
           </div>
         </div>
       ) : (
-        <div className="d-flex flex-column flex-grow-1">
-          <div className="flex-grow-1 p-3">
+        <div className="flex flex-col flex-grow">
+          <div className="flex-grow p-3">
             {initialLoading && (
-              <div className="text-center mt-5">Loading orders...</div>
+              <div className="text-center mt-5 text-gray-600">Loading orders...</div>
             )}
             {error && (
-              <div className="alert alert-danger text-center mt-5">{error}</div>
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-center mt-5">{error}</div>
             )}
 
             {!initialLoading && !error && (
-              <div className="row g-2 g-md-3 main-kds-view-container">
-              
-                <div className="col-12 col-md-6 col-lg-4 child-container mb-3 mb-md-0">
-                  <h4 className="display-5 text-white text-center fw-bold mb-2 mb-md-3 mb-lg-4 bg-secondary py-2 py-md-3 d-flex align-items-center justify-content-center rounded-3 responsive-section-header">
-                    <span className="responsive-header-text">Placed ({placedOrders.length})</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3">
+
+                <div className="mb-3 md:mb-0">
+                  <h4 className="text-3xl text-white text-center font-bold mb-2 md:mb-3 lg:mb-4 bg-gray-500 py-2 md:py-3 flex items-center justify-center rounded-lg">
+                    <span className="text-xl md:text-2xl lg:text-3xl">Placed ({placedOrders.length})</span>
                   </h4>
-                  <div className="row g-2 g-md-3">{renderOrders(placedOrders, "secondary")}</div>
+                  <div className="grid grid-cols-1 gap-2 md:gap-3">{renderOrders(placedOrders, "placed")}</div>
                 </div>
-                <div className="col-12 col-md-6 col-lg-4 child-container mb-3 mb-md-0">
-                  <h4 className="display-5 text-white text-center fw-bold mb-2 mb-md-3 mb-lg-4 bg-warning py-2 py-md-3 d-flex align-items-center justify-content-center rounded-3 responsive-section-header">
-                    <span className="responsive-header-text">Cooking ({cookingOrders.length})</span>
+                <div className="mb-3 md:mb-0">
+                  <h4 className="text-3xl text-white text-center font-bold mb-2 md:mb-3 lg:mb-4 bg-yellow-500 py-2 md:py-3 flex items-center justify-center rounded-lg">
+                    <span className="text-xl md:text-2xl lg:text-3xl">Cooking ({cookingOrders.length})</span>
                   </h4>
                   {/*
                     For Cooking: only show items that are not yet served in each order
                   */}
-                  <div className="row g-2 g-md-3 justify-content-center">
+                  <div className="grid grid-cols-1 gap-2 md:gap-3 justify-center">
                     {renderOrders(
                       cookingOrders.map((o) => ({
                         ...o,
@@ -853,14 +770,14 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                     )}
                   </div>
                 </div>
-                <div className="col-12 col-md-6 col-lg-4 child-container mb-3 mb-md-0">
-                  <h4 className="display-5 text-white text-center fw-bold mb-2 mb-md-3 mb-lg-4 bg-success py-2 py-md-3 d-flex align-items-center justify-content-center rounded-3 responsive-section-header">
-                    <span className="responsive-header-text">Pick Up ({servedOrders.length})</span>
+                <div className="mb-3 md:mb-0">
+                  <h4 className="text-3xl text-white text-center font-bold mb-2 md:mb-3 lg:mb-4 bg-green-800 py-2 md:py-3 flex items-center justify-center rounded-lg">
+                    <span className="text-xl md:text-2xl lg:text-3xl">Pick Up ({servedOrders.length})</span>
                   </h4>
                   {/*
                     For Pick Up: show served items from both servedOrders and cookingOrders
                   */}
-                  <div className="row g-2 g-md-3">
+                  <div className="grid grid-cols-1 gap-2 md:gap-3">
                     {renderOrders(
                       // merge cooking and served by order_id, prefer servedOrders base when duplicates
                       (() => {
@@ -884,7 +801,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                   </div>
                 </div>
                 {lastRefreshTime && (
-                  <div className="text-center mt-2 text-muted small responsive-refresh-text">Last refreshed at: {lastRefreshTime}</div>
+                  <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center mt-2 text-gray-500 text-xs">Last refreshed at: {lastRefreshTime}</div>
                 )}
               </div>
             )}

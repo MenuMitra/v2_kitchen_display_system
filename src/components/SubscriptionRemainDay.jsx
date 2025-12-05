@@ -90,9 +90,9 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
 
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center py-3">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
+      <div className="flex justify-center items-center py-3">
+        <div className="inline-block w-8 h-8 border-4 border-primary border-r-transparent rounded-full animate-spin" role="status">
+          <span className="sr-only">Loading...</span>
         </div>
       </div>
     );
@@ -100,7 +100,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
 
   if (error) {
     return (
-      <div className="alert alert-warning text-center py-2" role="alert">
+      <div className="bg-yellow-100 border border-yellow-200 text-yellow-800 text-center py-2 rounded mb-2" role="alert">
         {error}
       </div>
     );
@@ -108,7 +108,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
 
   if (!subscriptionData) {
     return (
-      <div className="alert alert-info text-center py-2" role="alert">
+      <div className="bg-blue-100 border border-blue-200 text-blue-800 text-center py-2 rounded mb-2" role="alert">
         No subscription data available
       </div>
     );
@@ -134,55 +134,26 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
   }
 
   return remainingDays <= 5 ? (
-    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: '10px' }}>
-      <div style={{
-        background: '#fff',
-        borderRadius: '8px',
-        boxShadow: '0 1px 4px rgba(80,89,111,0.06)',
-        border: '1px solid #ededed',
-        width: '100%',
-        maxWidth: '300px',
-        margin: '0 auto',
-      }}>
-        <div style={{ padding: '8px 12px 6px 12px' }}>
-          <div style={{
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            color: '#222',
-            marginBottom: '4px'
-          }}>
+    <div className="flex justify-center w-full mb-2.5">
+      <div className="bg-white rounded-lg shadow-[0_1px_4px_rgba(80,89,111,0.06)] border border-[#ededed] w-full max-w-[300px] mx-auto">
+        <div className="px-3 pt-2 pb-1.5">
+          <div className="font-semibold text-[0.85rem] text-[#222] mb-1">
             Timeline
           </div>
-          <div style={{ width: '100%', marginBottom: '6px' }}>
-            <div style={{
-              height: '16px',
-              borderRadius: '8px',
-              background: '#e4e6ea',
-              position: 'relative',
-              overflow: 'hidden',
-              width: '100%',
-            }}>
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                height: '100%',
-                width: `${percentage}%`,
-                background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
-                borderRadius: '8px',
-                transition: 'all 0.3s',
-                zIndex: 1,
-              }} />
+          <div className="w-full mb-1.5">
+            <div className="h-4 rounded-lg bg-[#e4e6ea] relative overflow-hidden w-full">
+              <div
+                className="absolute top-0 left-0 h-full rounded-lg transition-all duration-300 z-10"
+                style={{
+                  width: `${percentage}%`,
+                  background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+                }}
+              />
             </div>
           </div>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: '0.75rem',
-            margin: '0 2px'
-          }}>
-            <span style={{ color: '#374151', fontWeight: '500' }}>{completedDays} days completed</span>
-            <span style={{ color: remainingDays <= 5 ? '#ef4444' : '#374151', fontWeight: '500' }}>{remainingDays} days remaining</span>
+          <div className="flex justify-between text-xs mx-0.5">
+            <span className="text-gray-700 font-medium">{completedDays} days completed</span>
+            <span className={`font-medium ${remainingDays <= 5 ? 'text-red-500' : 'text-gray-700'}`}>{remainingDays} days remaining</span>
           </div>
         </div>
       </div>
