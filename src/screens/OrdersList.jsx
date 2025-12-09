@@ -349,7 +349,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         console.log('Periodic refresh triggered...');
         refetch();
       }
-    }, 2000); // Refresh every 30 seconds
+    }, 10000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
   }, [isFetching, queryLoading, refetch]);
@@ -536,7 +536,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs sm:text-[10px] font-bold text-gray-800">{timeLeft}s</div>
         </div>
         {userRole !== "super_owner" && order.kds_button_enabled === 1 && (
-          <button className="px-2 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors" onClick={handleRejectOrder}>
+          <button className="px-2 py-1 text-sm bg-red-500 text-white rounded-3xl hover:bg-red-600 transition-colors" onClick={handleRejectOrder}>
             Reject
           </button>
         )}
@@ -630,7 +630,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
                       return (
                         <div
-                          className={`flex flex-wrap justify-between items-center ${type === "placed" ? "border-l-[3px]" : ""} pl-2 mb-2 ${borderColorClass}`}
+                          className={`flex flex-wrap justify-between items-center ${type === "placed" ? "border-l-[3px]" : ""} pl-2 mb-0 ${borderColorClass}`}
                           key={index}
 
                         >
@@ -639,7 +639,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                               }`}
                           >
                             <hr
-                              className="h-[20px] w-[3px] mr-[5px] p-0 border-0"
+                              className="h-[10px] w-[3px] mr-[5px] p-0 border-0"
                               style={{
                                 backgroundColor: hrColor,
                               }}
@@ -663,7 +663,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                               !isSuperOwner &&
                               order.kds_button_enabled === 1 && (
                                 <button
-                                  className="px-2 py-1 text-xs sm:text-xs bg-green-800 text-white rounded hover:bg-green-600 transition-colors"
+                                  className="px-2 py-1 text-xs sm:text-xs bg-green-800 text-white rounded-3xl hover:bg-green-600 transition-colors"
                                   onClick={() => handleServeMenuItem(order.order_id, menu)}
                                 >
                                   <span className="hidden sm:inline">Served</span>
@@ -687,7 +687,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                 {/* Only show Complete Order button if kds_button_enabled = 1 */}
                 {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
                   <button
-                    className="w-full py-2 bg-green-800 text-white rounded hover:bg-green-600 transition-colors text-sm md:text-base font-medium mt-2"
+                    className="w-full py-2 bg-green-800 text-white rounded-3xl hover:bg-green-600 transition-colors text-sm md:text-base font-medium mt-2"
                     onClick={() => updateOrderStatus(order.order_id, "served")}
                   >
                     <span className="hidden sm:inline">Complete Order</span>

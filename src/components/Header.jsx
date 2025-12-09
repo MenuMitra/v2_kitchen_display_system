@@ -100,18 +100,18 @@ function Header({
       )}
       {!isFullscreen && (
         <header className="bg-white shadow-sm relative mt-0">
-          <nav className="bg-[#0b1727] w-full py-1 md:py-1">
+          <nav className="bg-[#0b1727] w-full py-0 md:py-0">
             <div className="w-full px-1 md:px-1 flex items-center justify-between">
 
               {/* Brand Section */}
-              <div className="flex items-center gap-1 md:gap-1">
+              <div className="flex items-center gap-0.5 md:gap-1">
                 <img
                   src={logo}
                   alt="Menumitra Logo"
-                  className="h-8 w-8 md:h-10 md:w-10 object-contain"
+                  className="h-5 w-5 md:h-7 md:w-7 object-contain"
                 />
-                <span className="hidden sm:inline text-lg md:text-xl font-bold text-white">Menumitra</span>
-                <span className="sm:hidden text-base font-bold text-white">MM</span>
+                <span className="hidden sm:inline text-base md:text-lg font-bold text-white">Menumitra</span>
+                <span className="sm:hidden text-sm font-bold text-white">MM</span>
                 <div className="max-w-[120px] md:max-w-none">
                   <OutletDropdown selectedOutlet={selectedOutlet} onSelect={onOutletSelect} />
                 </div>
@@ -119,20 +119,20 @@ function Header({
 
               {/* Centered Title (Desktop only) */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:block pointer-events-none">
-                <h1 className="m-0 truncate font-bold text-white text-[clamp(20px,5vw,36px)]">
+                <h1 className="m-0 truncate font-bold text-white text-[clamp(16px,3.5vw,24px)]">
                   K D S
                 </h1>
               </div>
 
               {/* Mobile Menu Toggle */}
               <button
-                className="md:hidden border-none p-1 text-white focus:outline-none"
+                className="md:hidden border-none p-0.5 text-white focus:outline-none"
                 type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               >
-                <span className="block w-6 h-0.5 bg-white mb-1"></span>
-                <span className="block w-6 h-0.5 bg-white mb-1"></span>
-                <span className="block w-6 h-0.5 bg-white"></span>
+                <span className="block w-5 h-0.5 bg-white mb-1"></span>
+                <span className="block w-5 h-0.5 bg-white mb-1"></span>
+                <span className="block w-5 h-0.5 bg-white"></span>
               </button>
 
               {/* Actions Section */}
@@ -142,7 +142,7 @@ function Header({
                 <div className="flex w-full md:w-auto rounded-l-3xl rounded-r-3xl overflow-hidden">
                   <button
                     type="button"
-                    className={`flex-1 md:flex-none min-w-[60px] md:min-w-[80px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-lg font-semibold transition-colors duration-200 ${localFilter === "today"
+                    className={`flex-1 md:flex-none min-w-[70px] md:min-w-[90px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-base font-semibold transition-colors duration-200 ${localFilter === "today"
                       ? "bg-[#1673ff] text-white"
                       : "bg-white text-[#1673ff] hover:bg-gray-100"
                       }`}
@@ -152,7 +152,7 @@ function Header({
                   </button>
                   <button
                     type="button"
-                    className={`flex-1 md:flex-none min-w-[60px] md:min-w-[80px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-lg font-semibold transition-colors duration-200 ${localFilter === "all"
+                    className={`flex-1 md:flex-none min-w-[70px] md:min-w-[90px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-base font-semibold transition-colors duration-200 ${localFilter === "all"
                       ? "bg-[#1673ff] text-white"
                       : "bg-white text-[#1673ff] hover:bg-gray-100"
                       }`}
