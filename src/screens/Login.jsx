@@ -157,7 +157,7 @@ function Login() {
   return (
     <>
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f7f8fc] p-4">
-        <div className="w-full max-w-md sm:max-w-lg lg:max-w-2xl bg-white rounded-2xl shadow-[0_4px_16px_0_rgba(0,0,0,0.12)] p-6 sm:p-8 lg:p-10 border border-gray-300 mt-10">
+        <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl bg-white rounded-2xl shadow-[0_4px_16px_0_rgba(0,0,0,0.12)] p-8 sm:p-10 lg:p-12 border border-gray-300 mt-10">
           <div className="flex flex-col items-center justify-center">
             <div className="flex justify-center mb-4">
               <Link to="/" className="flex flex-col items-center no-underline">
@@ -167,12 +167,12 @@ function Login() {
                 <span className="text-2xl sm:text-3xl font-semibold text-gray-800 mt-3">MenuMitra</span>
               </Link>
             </div>
-            <div className="flex flex-col justify-center items-center mt-2 text-center">
+            <div className="flex flex-col justify-center items-center mt-1 text-center">
               <span className="text-xl sm:text-2xl font-semibold text-gray-800">Kitchen Display System</span>
-              <p className="mt-3 pb-1 text-gray-500 text-sm sm:text-base">Sign in to continue to your account</p>
+              <p className="mt-2 text-gray-500 text-sm sm:text-base">Sign in to continue to your account</p>
             </div>
-            <div className="w-full mt-4">
-              <form id="formAuthentication" className="mb-3 w-full" onSubmit={showOtpInput ? handleVerifyOTP : handleSendOTP} noValidate>
+            <div className="w-full mt-1">
+              <form id="formAuthentication" className="mb-1 w-full p-1" onSubmit={showOtpInput ? handleVerifyOTP : handleSendOTP} noValidate>
                 {!showOtpInput ? (
                   <div className="mb-3 w-full px-0 sm:px-4">
                     <div>
@@ -180,7 +180,7 @@ function Login() {
                     </div>
                     <input
                       type="text"
-                      className="w-full h-[45px] px-3 py-2 text-lg border border-gray-800 rounded-3xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400"
+                      className="w-full h-[55px] px-4 py-3 text-xl border border-gray-800 rounded-3xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400"
                       id="mobile"
                       name="mobile"
                       placeholder="Enter your mobile number"
@@ -214,13 +214,13 @@ function Login() {
                       </div>
                     )}
                     <div className="text-center mt-2 mb-3 text-gray-700">Enter 4-digit Verification code </div>
-                    <div className="flex justify-center gap-3 mb-3 px-2">
+                    <div className="flex justify-center gap-4 mb-4 px-2">
                       {otpValues.map((value, index) => (
                         <input
                           key={index}
                           ref={otpRefs[index]}
                           type="text"
-                          className="w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] text-center text-xl sm:text-2xl border border-gray-300 rounded-3xl focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] text-center text-2xl sm:text-3xl border border-gray-300 rounded-3xl focus:outline-none focus:ring-2 focus:ring-primary"
                           value={value}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(index, e)}
@@ -257,9 +257,9 @@ function Login() {
                   </>
                 )}
 
-                <div className="mb-3 w-full px-0 sm:px-4">
+                <div className="mb-1 w-full px-0 sm:px-4">
                   <button
-                    className={`w-full h-[45px] rounded-3xl text-white font-medium transition-colors duration-200 ${
+                    className={`w-full h-[55px] rounded-3xl text-white text-lg font-medium transition-colors duration-200 ${
                       showOtpInput
                         ? "bg-primary hover:bg-blue-700"
                         : mobileNumber.length === 10
@@ -296,16 +296,16 @@ function Login() {
             <div className="flex flex-col items-center justify-center">
               
               <div className="flex justify-center gap-3 mb-3">
-                <a href="https://menumitra.com/" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl hover:text-blue-500 hover:border-blue-500 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="Google">
+                <a href="https://menumitra.com/" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-green-600 text-xl hover:text-blue-500 hover:border-blue-500 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="Google">
                   <i className="ri-google-fill" />
                 </a>
-                <a href="https://www.facebook.com/people/Menu-Mitra/61565082412478/" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl hover:text-blue-600 hover:border-blue-600 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                <a href="https://www.facebook.com/people/Menu-Mitra/61565082412478/" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-blue-600 text-xl hover:text-blue-600 hover:border-blue-600 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
                   <i className="ri-facebook-fill" />
                 </a>
-                <a href="https://www.instagram.com/menumitra/" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl hover:text-pink-600 hover:border-pink-600 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                <a href="https://www.instagram.com/menumitra/" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-pink-600 text-xl hover:text-pink-600 hover:border-pink-600 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
                   <i className="ri-instagram-fill" />
                 </a>
-                <a href="https://www.youtube.com/@menumitra" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl hover:text-red-600 hover:border-red-600 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+                <a href="https://www.youtube.com/@menumitra" className="w-[42px] h-[42px] rounded-full border-2 border-gray-200 flex items-center justify-center text-red-600 text-xl hover:text-red-600 hover:border-red-600 hover:shadow-md transition-all duration-300 no-underline" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
                   <i className="ri-youtube-fill" />
                 </a>
                

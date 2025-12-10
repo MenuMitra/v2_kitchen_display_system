@@ -94,13 +94,13 @@ function Header({
   return (
     <>
       {!isFullscreen && ENV.env !== 'production' && (
-        <div className="w-full bg-[#b22222] text-white text-center py-[3px] text-sm font-bold sticky top-0 z-[1100]">
+        <div className="w-full bg-[#b22222] text-white text-center py-[1px] text-sm font-bold sticky top-0 z-[1100]">
           Testing Environment
         </div>
       )}
       {!isFullscreen && (
-        <header className="bg-white shadow-sm relative mt-0">
-          <nav className="bg-[#0b1727] w-full py-0 md:py-0">
+        <header className="bg-white shadow-lg relative mt-0 mb-4">
+          <nav className="bg-white w-full py-0 md:py-0">
             <div className="w-full px-1 md:px-1 flex items-center justify-between">
 
               {/* Brand Section */}
@@ -108,10 +108,10 @@ function Header({
                 <img
                   src={logo}
                   alt="Menumitra Logo"
-                  className="h-5 w-5 md:h-7 md:w-7 object-contain"
+                  className="h-8 w-8 md:h-10 md:w-10 object-contain"
                 />
-                <span className="hidden sm:inline text-base md:text-lg font-bold text-white">Menumitra</span>
-                <span className="sm:hidden text-sm font-bold text-white">MM</span>
+                <span className="hidden sm:inline text-base md:text-2xl font-bold text-black">Menumitra</span>
+                <span className="sm:hidden text-sm font-bold text-black">MM</span>
                 <div className="max-w-[120px] md:max-w-none">
                   <OutletDropdown selectedOutlet={selectedOutlet} onSelect={onOutletSelect} />
                 </div>
@@ -119,27 +119,27 @@ function Header({
 
               {/* Centered Title (Desktop only) */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:block pointer-events-none">
-                <h1 className="m-0 truncate font-bold text-white text-[clamp(16px,3.5vw,24px)]">
+                <h1 className="m-0 truncate font-bold  text-black text-[clamp(18px,3.5vw,28px)]">
                   K D S
                 </h1>
               </div>
 
               {/* Mobile Menu Toggle */}
               <button
-                className="md:hidden border-none p-0.5 text-white focus:outline-none"
+                className="md:hidden border-none p-0.5 text-black focus:outline-none"
                 type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               >
-                <span className="block w-5 h-0.5 bg-white mb-1"></span>
-                <span className="block w-5 h-0.5 bg-white mb-1"></span>
-                <span className="block w-5 h-0.5 bg-white"></span>
+                <span className="block w-5 h-0.5 bg-black mb-1"></span>
+                <span className="block w-5 h-0.5 bg-black mb-1"></span>
+                <span className="block w-5 h-0.5 bg-black"></span>
               </button>
 
               {/* Actions Section */}
-              <div className={`${isMobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row absolute md:static top-full left-0 w-full md:w-auto md:bg-transparent shadow-md md:shadow-none p-4 md:p-0 z-50 gap-2 md:gap-3 items-start md:items-center`}>
+              <div className={`${isMobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row absolute md:static top-full left-0 w-full md:w-auto bg-white md:bg-transparent shadow-md md:shadow-none p-4 md:p-0 z-50 gap-2 md:gap-3 items-start md:items-center`}>
 
                 {/* Filter Toggle Group */}
-                <div className="flex w-full md:w-auto rounded-l-3xl rounded-r-3xl overflow-hidden">
+                <div className="flex w-full md:w-auto rounded-l-3xl border border-2 rounded-r-3xl overflow-hidden">
                   <button
                     type="button"
                     className={`flex-1 md:flex-none min-w-[70px] md:min-w-[90px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-base font-semibold transition-colors duration-200 ${localFilter === "today"
