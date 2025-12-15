@@ -220,7 +220,7 @@ function Login() {
                           key={index}
                           ref={otpRefs[index]}
                           type="text"
-                          className="w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] text-center text-2xl sm:text-3xl border border-gray-300 rounded-3xl focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="w-[40px] h-[40px] sm:w-[60px] sm:h-[60px] text-center text-2xl sm:text-3xl border border-2 border-gray-300 rounded-3xl focus:outline-none focus:ring-2 focus:ring-primary"
                           value={value}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(index, e)}

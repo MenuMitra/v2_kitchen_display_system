@@ -20,6 +20,12 @@ function Header({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isTodayHovered, setIsTodayHovered] = useState(false);
+  const [isAllHovered, setIsAllHovered] = useState(false);
+  const [isRefreshHovered, setIsRefreshHovered] = useState(false);
+  const [isFullscreenHovered, setIsFullscreenHovered] = useState(false);
+  const [isLogoutHovered, setIsLogoutHovered] = useState(false);
+  const [isCancelHovered, setIsCancelHovered] = useState(false);
 
   const userId = localStorage.getItem("user_id");
   const navigate = useNavigate();
@@ -144,9 +150,15 @@ function Header({
                     type="button"
                     className={`flex-1 md:flex-none min-w-[70px] md:min-w-[90px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-base font-semibold transition-colors duration-200 ${localFilter === "today"
                       ? "bg-[#1673ff] text-white"
-                      : "bg-white text-[#1673ff] hover:bg-gray-100"
+                      : isTodayHovered
+                      ? "bg-gray-100 text-[#1673ff]"
+                      : "bg-white text-[#1673ff]"
                       }`}
                     onClick={() => changeFilter("today")}
+                    onMouseEnter={() => {
+                      if (localFilter !== "today") setIsTodayHovered(true);
+                    }}
+                    onMouseLeave={() => setIsTodayHovered(false)}
                   >
                     Today
                   </button>
@@ -154,9 +166,15 @@ function Header({
                     type="button"
                     className={`flex-1 md:flex-none min-w-[70px] md:min-w-[90px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-base font-semibold transition-colors duration-200 ${localFilter === "all"
                       ? "bg-[#1673ff] text-white"
-                      : "bg-white text-[#1673ff] hover:bg-gray-100"
+                      : isAllHovered
+                      ? "bg-gray-100 text-[#1673ff]"
+                      : "bg-white text-[#1673ff]"
                       }`}
                     onClick={() => changeFilter("all")}
+                    onMouseEnter={() => {
+                      if (localFilter !== "all") setIsAllHovered(true);
+                    }}
+                    onMouseLeave={() => setIsAllHovered(false)}
                   >
                     All
                   </button>
@@ -165,26 +183,32 @@ function Header({
                 {/* Action Icons */}
                 <div className="flex items-center justify-between w-full md:w-auto gap-2">
                   <button
-                    className="w-[45px] h-[45px] flex items-center justify-center border-2 border-gray-400 rounded-3xl text-gray-500 bg-transparent hover:bg-gray-100 transition-colors"
+                    className={`w-[45px] h-[45px] flex items-center justify-center border-2 border-gray-400 rounded-3xl text-gray-500 transition-colors ${isRefreshHovered ? "bg-gray-100 border-gray-500" : "bg-white"}`}
                     title="Refresh"
                     onClick={(event) => {
                       onRefresh?.();
                       event.currentTarget.blur();
                     }}
+                    onMouseEnter={() => setIsRefreshHovered(true)}
+                    onMouseLeave={() => setIsRefreshHovered(false)}
                   >
                     <i className="fa-solid fa-rotate text-lg" />
                   </button>
                   <button
-                    className="w-[45px] h-[45px] flex items-center justify-center border-2 border-gray-400 rounded-3xl text-gray-500 bg-transparent hover:bg-gray-100 transition-colors"
+                    className={`w-[45px] h-[45px] flex items-center justify-center border-2 border-gray-400 rounded-3xl text-gray-500 transition-colors ${isFullscreenHovered ? "bg-gray-100 border-gray-500" : "bg-white"}`}
                     title="Fullscreen"
                     onClick={handleFullscreen}
+                    onMouseEnter={() => setIsFullscreenHovered(true)}
+                    onMouseLeave={() => setIsFullscreenHovered(false)}
                   >
                     <i className={`${isFullscreen ? "bx bx-exit-fullscreen" : "bx bx-fullscreen"} text-xl`} />
                   </button>
                   <button
-                    className="w-[45px] h-[45px] flex items-center justify-center border-2 border-red-500 rounded-3xl text-red-500 bg-transparent hover:bg-red-50 transition-colors"
+                    className={`w-[45px] h-[45px] flex items-center justify-center border-2 border-red-500 rounded-3xl text-red-500 transition-colors ${isLogoutHovered ? "bg-red-100 border-red-600" : "bg-white"}`}
                     title="Logout"
                     onClick={() => setShowLogoutConfirm(true)}
+                    onMouseEnter={() => setIsLogoutHovered(true)}
+                    onMouseLeave={() => setIsLogoutHovered(false)}
                   >
                     <i className="fa-solid fa-right-from-bracket text-lg"></i>
                   </button>
@@ -214,8 +238,10 @@ function Header({
                     <div className="flex justify-between items-center gap-4">
                       <button
                         type="button"
-                        className="flex-1 py-2 rounded-full border border-gray-400 text-gray-500 bg-white hover:bg-gray-50 transition-colors font-medium"
+                        className={`flex-1 py-2 rounded-full border border-gray-400 text-gray-500 transition-colors font-medium ${isCancelHovered ? "bg-gray-100 border-gray-500" : "bg-white"}`}
                         onClick={() => handleLogoutConfirm(false)}
+                        onMouseEnter={() => setIsCancelHovered(true)}
+                        onMouseLeave={() => setIsCancelHovered(false)}
                       >
                         Cancel
                       </button>

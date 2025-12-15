@@ -191,7 +191,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
                           <span className="text-xs text-gray-500 ml-1">({outlet.outlet_code})</span>
                         )}
                       </div>
-                      {outlet.address && <div className="text-xs text-gray-500">{outlet.address}</div>}
+                      {outlet.address && <div className="text-xs capitalize text-gray-500">{outlet.address}</div>}
                       {outlet.owner_name && (
                         <div className="text-xs text-gray-500">{outlet.owner_name}</div>
                       )}
