@@ -172,11 +172,13 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
                 const isInactive = outlet && outlet.outlet_status === false;
                 const isSelected = selected && selected.outlet_id === outlet.outlet_id;
                 return (
-                  <li className="p-1 m-1 border-[1.5px] border-[#bbb] rounded-[10px] bg-[#f8f9fa] hover:bg-white hover:border-[#0d6efd] hover:shadow-[0_4px_16px_rgba(13,110,253,0.18)] transition-all duration-150" key={`${outlet.outlet_id}-${index}`}>
+                  <li
+                    className={`p-1 m-1 border-[1.5px] rounded-[10px] transition-all duration-150 ${isInactive ? "bg-[#ffe6e6] border-[#ffe6e6]" : "bg-[#f8f9fa] border-[#bbb] hover:bg-white hover:border-[#0d6efd] hover:shadow-[0_4px_16px_rgba(13,110,253,0.18)]"}`}
+                    key={`${outlet.outlet_id}-${index}`}
+                  >
                     <button
                       type="button"
-                      className={`w-full p-1 m-0 text-left whitespace-normal border-none bg-transparent rounded-lg text-base ${isSelected ? "font-bold text-gray-800 bg-blue-100" : "text-gray-800"
-                        } ${isInactive ? "cursor-not-allowed bg-[#ffe6e6] text-[#a30000] opacity-90" : ""}`}
+                      className={`w-full p-1 m-0 text-left whitespace-normal border-none bg-transparent rounded-lg text-base ${isSelected ? "font-bold text-gray-800 bg-blue-100" : isInactive ? "text-[#a30000] cursor-not-allowed" : "text-gray-800"}`}
                       onClick={() => handleSelect(outlet)}
                       disabled={isInactive}
                     >
