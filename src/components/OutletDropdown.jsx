@@ -53,7 +53,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       if (outletsData.length === 1) {
         const singleOutlet = outletsData[0];
         // If the only outlet is inactive, don't auto-select and keep dropdown visible
-        if (singleOutlet && singleOutlet.outlet_status === false) {
+        if (singleOutlet && singleOutlet.outlet_status === 0) {
           setHideDropdown(false);
         } else {
           setHideDropdown(true);
@@ -74,7 +74,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   const handleSelect = (outlet) => {
     console.log("handleSelect", outlet);
     // Block selection for inactive outlets
-    if (outlet && outlet.outlet_status === false) {
+    if (outlet && outlet.outlet_status === 0) {
       return;
     }
     localStorage.setItem("outlet_id", outlet.outlet_id);
@@ -169,7 +169,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
             {loading && <li className="px-4 py-2 text-gray-700">Loading...</li>}
             {!loading &&
               filteredOutlets.map((outlet, index) => {
-                const isInactive = outlet && outlet.outlet_status === false;
+                const isInactive = outlet && outlet.outlet_status === 0;
                 const isSelected = selected && selected.outlet_id === outlet.outlet_id;
                 return (
                   <li
