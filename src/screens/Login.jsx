@@ -180,7 +180,7 @@ function Login() {
                     </div>
                     <input
                       type="text"
-                      className="w-full h-[55px] px-4 py-3 text-xl border border-gray-800 rounded-3xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400"
+                      className="w-full h-[55px] px-4 py-3 text-xl border border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400"
                       id="mobile"
                       name="mobile"
                       placeholder="Enter your mobile number"
