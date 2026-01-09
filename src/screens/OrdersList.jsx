@@ -29,6 +29,36 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const [lastRefreshTime, setLastRefreshTime] = useState(null);
 
   const autoProcessingRef = useRef(new Set());
+  
+  // Helper functions to manage served orders in localStorage
+  const getLocalServedOrders = useCallback(() => {
+    try {
+      const stored = localStorage.getItem("kds_served_orders");
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const saveLocalServedOrder = useCallback((order) => {
+    try {
+      const served = getLocalServedOrders();
+      served[String(order.order_id)] = order;
+      localStorage.setItem("kds_served_orders", JSON.stringify(served));
+    } catch (e) {
+      console.error("Error saving served order:", e);
+    }
+  }, [getLocalServedOrders]);
+
+  const removeLocalServedOrder = useCallback((orderId) => {
+    try {
+      const served = getLocalServedOrders();
+      delete served[String(orderId)];
+      localStorage.setItem("kds_served_orders", JSON.stringify(served));
+    } catch (e) {
+      console.error("Error removing served order:", e);
+    }
+  }, [getLocalServedOrders]);
 
   const [manualMode, setManualMode] = useState(() => {
     const saved = localStorage.getItem("kds_manual_mode");
@@ -44,6 +74,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const deviceId = localStorage.getItem("device_id");
 
   // TanStack Query: fetch orders every 30s, cached 30s
+  // Note: queryKey does NOT include filter to prevent cache invalidation on filter change
   const {
     data: ordersResponse,
     refetch,
@@ -51,7 +82,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     isLoading: queryLoading,
     error: queryError,
   } = useQuery({
-    queryKey: ["orders", isValidOutletId ? numericOutletId : null, filter],
+    queryKey: ["orders", isValidOutletId ? numericOutletId : null],
     enabled: !!accessToken && isValidOutletId,
     refetchInterval: false,
     queryFn: async () => {
@@ -132,6 +163,8 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       const updatedOrder = formatOrderForStatus(order);
       if (updatedOrder) {
         recordOptimisticOrder(updatedOrder);
+        // Cache the served order in localStorage
+        saveLocalServedOrder(updatedOrder);
         setServedOrders((prev) => {
           const filtered = prev.filter((o) => String(o.order_id) !== stringOrderId);
           return [...filtered, updatedOrder];
@@ -155,12 +188,13 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
     if (nextStatus === "cancelled") {
       clearOptimisticOrder(stringOrderId);
+      removeLocalServedOrder(stringOrderId);
       setPlacedOrders((prev) => prev.filter((o) => String(o.order_id) !== stringOrderId));
       setCookingOrders((prev) => prev.filter((o) => String(o.order_id) !== stringOrderId));
       setPaidOrders((prev) => prev.filter((o) => String(o.order_id) !== stringOrderId));
       setServedOrders((prev) => prev.filter((o) => String(o.order_id) !== stringOrderId));
     }
-  }, [clearOptimisticOrder, recordOptimisticOrder, setCookingOrders, setPlacedOrders, setPaidOrders, setServedOrders]);
+  }, [clearOptimisticOrder, recordOptimisticOrder, setCookingOrders, setPlacedOrders, setPaidOrders, setServedOrders, saveLocalServedOrder, removeLocalServedOrder]);
 
   const refreshToken = useCallback(async () => {
     const refreshToken = localStorage.getItem("refresh_token");
@@ -299,13 +333,50 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       setServedOrders(() => {
         const serverServed = withoutOptimistic(result.served_orders);
         const optimisticServed = optimisticByStatus("served");
-        const merged = [...serverServed];
+        
+        // Ensure all menu items in served orders have menu_status: "served"
+        const normalizeServedOrder = (order) => {
+          if (order.order_status !== "served") return order;
+          return {
+            ...order,
+            menu_details: Array.isArray(order.menu_details)
+              ? order.menu_details.map((m) => ({
+                  ...m,
+                  menu_status: "served",
+                }))
+              : [],
+          };
+        };
+        
+        const normalizedServerServed = serverServed.map(normalizeServedOrder);
+        
+        // Update localStorage with server served orders
+        normalizedServerServed.forEach((order) => {
+          saveLocalServedOrder(order);
+        });
+        
+        // Merge: server served + optimistic + locally cached served orders
+        const merged = new Map();
+        
+        // Add server served orders
+        normalizedServerServed.forEach((order) => {
+          merged.set(String(order.order_id), order);
+        });
+        
+        // Add optimistic served orders
         optimisticServed.forEach((order) => {
-          if (!merged.some((o) => String(o.order_id) === String(order.order_id))) {
-            merged.push(order);
+          merged.set(String(order.order_id), order);
+        });
+        
+        // Add locally cached served orders from localStorage (persist them even if server doesn't return them)
+        const localServed = getLocalServedOrders();
+        Object.values(localServed).forEach((order) => {
+          if (!merged.has(String(order.order_id))) {
+            merged.set(String(order.order_id), order);
           }
         });
-        return merged;
+        
+        return Array.from(merged.values());
       });
       setSubscriptionData(result.subscription_details || null);
       setLastRefreshTime(new Date().toLocaleTimeString());
@@ -340,7 +411,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         autoAcceptPlacedOrders(result.placed_orders);
       }
     }
-  }, [ordersResponse, queryLoading, queryError, manualMode, onSubscriptionDataChange, autoAcceptPlacedOrders]);
+  }, [ordersResponse, queryLoading, queryError, manualMode, onSubscriptionDataChange, autoAcceptPlacedOrders, getLocalServedOrders, saveLocalServedOrder]);
 
   // Add periodic refresh for faster updates
   useEffect(() => {
@@ -349,10 +420,15 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         console.log('Periodic refresh triggered...');
         refetch();
       }
-    }, 10000); // Refresh every 30 seconds
+    }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
   }, [isFetching, queryLoading, refetch]);
+
+  // Refetch when filter changes
+  useEffect(() => {
+    refetch();
+  }, [filter, refetch]);
 
   // Update a single menu item status using update_menu_status API
   const handleServeMenuItem = useCallback(
@@ -788,13 +864,20 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                             map.set(o.order_id, o);
                           }
                         });
-                        return Array.from(map.values()).map((o) => ({
+                        const orders = Array.from(map.values()).map((o) => ({
                           ...o,
                           order_status: o.order_status === "served" ? "served" : "cooking",
                           menu_details: Array.isArray(o.menu_details)
                             ? o.menu_details.filter((m) => m.menu_status === "served")
                             : [],
                         }));
+                        
+                        // Sort by date_time in descending order (latest first)
+                        return orders.sort((a, b) => {
+                          const dateA = new Date(a.date_time || 0).getTime();
+                          const dateB = new Date(b.date_time || 0).getTime();
+                          return dateB - dateA;
+                        });
                       })(),
                       "success"
                     )}

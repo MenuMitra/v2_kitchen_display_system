@@ -155,7 +155,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       </button>
 
       {show && (
-        <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] max-w-[300px] max-h-[290px] overflow-y-auto bg-[#d1d3d4] z-[1000] shadow rounded overflow-hidden">
+        <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] max-w-[300px] max-h-[320px] overflow-y-auto bg-[#d1d3d4] z-[1000] shadow rounded overflow-hidden">
           <div className="p-2">
             <input
               type="search"
@@ -165,7 +165,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <ul className="list-none m-0 p-0 max-h-[250px] overflow-y-auto [&::-webkit-scrollbar]:hidden">
+          <ul className="list-none m-0 p-0 max-h-[260px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-200 [&::-webkit-scrollbar-thumb]:bg-gray-400 [&::-webkit-scrollbar-thumb]:rounded">
             {loading && <li className="px-4 py-2 text-gray-700">Loading...</li>}
             {!loading &&
               filteredOutlets.map((outlet, index) => {
