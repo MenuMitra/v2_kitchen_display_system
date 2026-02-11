@@ -22,7 +22,7 @@ const CONFIG = {
 const { API_HOST, WS_URL } = CONFIG[CURRENT_ENV];
 
 // Common base paths used across the app
-const V2_COMMON_BASE = `${API_HOST}/v2/common`;
+const V2_COMMON_BASE = `${API_HOST}/v2.2/common`;
 const COMMON_API_BASE = `${API_HOST}/common_api`;
 
 export const ENV = {

@@ -20,7 +20,7 @@ const CONFIG = {
 const { API_HOST, WS_URL } = CONFIG[CURRENT_ENV] || CONFIG.development;
 
 // Common base paths used across the app
-export const V2_COMMON_BASE = `${API_HOST}/v2/common`;
+export const V2_COMMON_BASE = `${API_HOST}/v2.2/common`;
 export const COMMON_API_BASE = `${API_HOST}/common_api`;
 
 // Base API URL (alias for convenience)
