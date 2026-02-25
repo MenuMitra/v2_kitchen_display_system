@@ -1,6 +1,6 @@
 {
   "name": "menumitra_kitchen_display_system",
-  "version": "0.1.0",
+  "version": "0.2.2",
   "private": true,
   "dependencies": {
     "@firebase/messaging": "^0.12.16",

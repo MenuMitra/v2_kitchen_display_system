@@ -29,7 +29,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const [lastRefreshTime, setLastRefreshTime] = useState(null);
 
   const autoProcessingRef = useRef(new Set());
-  
+
   // Helper functions to manage served orders in localStorage
   const getLocalServedOrders = useCallback(() => {
     try {
@@ -333,7 +333,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       setServedOrders(() => {
         const serverServed = withoutOptimistic(result.served_orders);
         const optimisticServed = optimisticByStatus("served");
-        
+
         // Ensure all menu items in served orders have menu_status: "served"
         const normalizeServedOrder = (order) => {
           if (order.order_status !== "served") return order;
@@ -341,33 +341,33 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
             ...order,
             menu_details: Array.isArray(order.menu_details)
               ? order.menu_details.map((m) => ({
-                  ...m,
-                  menu_status: "served",
-                }))
+                ...m,
+                menu_status: "served",
+              }))
               : [],
           };
         };
-        
+
         const normalizedServerServed = serverServed.map(normalizeServedOrder);
-        
+
         // Update localStorage with server served orders
         normalizedServerServed.forEach((order) => {
           saveLocalServedOrder(order);
         });
-        
+
         // Merge: server served + optimistic + locally cached served orders
         const merged = new Map();
-        
+
         // Add server served orders
         normalizedServerServed.forEach((order) => {
           merged.set(String(order.order_id), order);
         });
-        
+
         // Add optimistic served orders
         optimisticServed.forEach((order) => {
           merged.set(String(order.order_id), order);
         });
-        
+
         // Add locally cached served orders from localStorage (persist them even if server doesn't return them)
         const localServed = getLocalServedOrders();
         Object.values(localServed).forEach((order) => {
@@ -375,7 +375,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
             merged.set(String(order.order_id), order);
           }
         });
-        
+
         return Array.from(merged.values());
       });
       setSubscriptionData(result.subscription_details || null);
@@ -671,7 +671,13 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         }
 
         // Skip rendering card if no visible items for this section
-        if (!visibleMenus.length) return null;
+        // UNLESS the order status explicitly matches this column's type (Placed/Cooking/Served)
+        const isPrimaryColumn =
+          (type === "placed" && order.order_status === "placed") ||
+          (type === "warning" && order.order_status === "cooking") ||
+          (type === "success" && order.order_status === "served");
+
+        if (!visibleMenus.length && !isPrimaryColumn) return null;
 
         return (
           <div className="w-full" key={order.order_id}>
@@ -871,7 +877,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                             ? o.menu_details.filter((m) => m.menu_status === "served")
                             : [],
                         }));
-                        
+
                         // Sort by date_time in descending order (latest first)
                         return orders.sort((a, b) => {
                           const dateA = new Date(a.date_time || 0).getTime();
