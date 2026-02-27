@@ -688,6 +688,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                 <div className="flex justify-between items-center flex-wrap gap-1 md:gap-0">
                   <p className="text-xl md:text-2xl font-bold mb-0 flex items-center">
                     <i className="bx bx-hash mr-1"></i>{order.order_number}
+                    {order.combo_count > 0 && (
+                      <span className="ml-2 text-blue-600 text-sm md:text-base font-semibold">
+                        (+{order.combo_count} Combo)
+                      </span>
+                    )}
                   </p>
                   <p className="mb-0 text-base md:text-xl capitalize font-semibold">
                     {order.section_name
