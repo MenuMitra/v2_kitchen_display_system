@@ -6,7 +6,7 @@ import SubscriptionRemainDay from "./SubscriptionRemainDay";
 import { ENV } from "../config/env";
 import { V2_COMMON_BASE } from "../config";
 
-console.log("current environment", ENV.env);
+
 
 function Header({
   filter,
@@ -99,11 +99,7 @@ function Header({
 
   return (
     <>
-      {!isFullscreen && ENV.env !== 'production' && (
-        <div className="w-full bg-[#b22222] text-white text-center py-[1px] text-sm font-bold sticky top-0 z-[1100]">
-          Testing Environment
-        </div>
-      )}
+
       {!isFullscreen && (
         <header className="bg-white shadow-lg relative mt-0 mb-4">
           <nav className="bg-white w-full py-0 md:py-0">
@@ -151,8 +147,8 @@ function Header({
                     className={`flex-1 md:flex-none min-w-[70px] md:min-w-[90px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-base font-semibold transition-colors duration-200 ${localFilter === "today"
                       ? "bg-[#1673ff] text-white"
                       : isTodayHovered
-                      ? "bg-gray-100 text-[#1673ff]"
-                      : "bg-white text-[#1673ff]"
+                        ? "bg-gray-100 text-[#1673ff]"
+                        : "bg-white text-[#1673ff]"
                       }`}
                     onClick={() => changeFilter("today")}
                     onMouseEnter={() => {
@@ -167,8 +163,8 @@ function Header({
                     className={`flex-1 md:flex-none min-w-[70px] md:min-w-[90px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-base font-semibold transition-colors duration-200 ${localFilter === "all"
                       ? "bg-[#1673ff] text-white"
                       : isAllHovered
-                      ? "bg-gray-100 text-[#1673ff]"
-                      : "bg-white text-[#1673ff]"
+                        ? "bg-gray-100 text-[#1673ff]"
+                        : "bg-white text-[#1673ff]"
                       }`}
                     onClick={() => changeFilter("all")}
                     onMouseEnter={() => {
