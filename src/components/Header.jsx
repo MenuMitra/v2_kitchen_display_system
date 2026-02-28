@@ -151,8 +151,8 @@ function Header({
                     className={`flex-1 md:flex-none min-w-[70px] md:min-w-[90px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-base font-semibold transition-colors duration-200 ${localFilter === "today"
                       ? "bg-[#1673ff] text-white"
                       : isTodayHovered
-                      ? "bg-gray-100 text-[#1673ff]"
-                      : "bg-white text-[#1673ff]"
+                        ? "bg-gray-100 text-[#1673ff]"
+                        : "bg-white text-[#1673ff]"
                       }`}
                     onClick={() => changeFilter("today")}
                     onMouseEnter={() => {
@@ -167,8 +167,8 @@ function Header({
                     className={`flex-1 md:flex-none min-w-[70px] md:min-w-[90px] py-1.5 md:py-2 px-4 md:px-6 text-sm md:text-base font-semibold transition-colors duration-200 ${localFilter === "all"
                       ? "bg-[#1673ff] text-white"
                       : isAllHovered
-                      ? "bg-gray-100 text-[#1673ff]"
-                      : "bg-white text-[#1673ff]"
+                        ? "bg-gray-100 text-[#1673ff]"
+                        : "bg-white text-[#1673ff]"
                       }`}
                     onClick={() => changeFilter("all")}
                     onMouseEnter={() => {
@@ -238,12 +238,12 @@ function Header({
                     <div className="flex justify-between items-center gap-4">
                       <button
                         type="button"
-                        className={`flex-1 py-2 rounded-full border border-gray-400 text-gray-500 transition-colors font-medium ${isCancelHovered ? "bg-gray-100 border-gray-500" : "bg-white"}`}
+                        className={`flex-1 py-2 rounded-full border border-gray-400 text-gray-500 transition-colors font-medium flex items-center justify-center gap-2 ${isCancelHovered ? "bg-gray-100 border-gray-500" : "bg-white"}`}
                         onClick={() => handleLogoutConfirm(false)}
                         onMouseEnter={() => setIsCancelHovered(true)}
                         onMouseLeave={() => setIsCancelHovered(false)}
                       >
-                        Cancel
+                        <i className="fa-solid fa-times"></i> Cancel
                       </button>
                       <button
                         type="button"

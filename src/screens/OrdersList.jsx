@@ -29,6 +29,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const [lastRefreshTime, setLastRefreshTime] = useState(null);
 
   const autoProcessingRef = useRef(new Set());
+  const servingMenuItemsRef = useRef(new Set());
 
   // Helper functions to manage served orders in localStorage
   const getLocalServedOrders = useCallback(() => {
@@ -430,31 +431,42 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     refetch();
   }, [filter, refetch]);
 
-  // Update a single menu item status using update_menu_status API
+  // Update a single menu item status using update_order_status API
   const handleServeMenuItem = useCallback(
     async (orderId, menu) => {
       if (!accessToken || !orderId || !menu || !menu.menu_id) {
         navigate("/login");
         return;
       }
-      try {
-        // Build menu_items array with menu_id and optional portion_id
-        const menuItem = {
-          menu_id: Number(menu.menu_id),
-        };
-        if (menu.portion_id) {
-          menuItem.portion_id = Number(menu.portion_id);
-        }
 
+      // Prevent double-clicks
+      const menuKey = `${orderId}_${menu.menu_id}`;
+      if (servingMenuItemsRef.current.has(menuKey)) return;
+      servingMenuItemsRef.current.add(menuKey);
+
+      // Optimistic UI update BEFORE the API call
+      setCookingOrders((prev) =>
+        prev.map((order) => {
+          if (String(order.order_id) !== String(orderId)) return order;
+          if (!Array.isArray(order.menu_details)) return order;
+          const updatedMenus = order.menu_details.map((m) =>
+            String(m.menu_id) === String(menu.menu_id) ? { ...m, menu_status: "served" } : m
+          );
+          return { ...order, menu_details: updatedMenus };
+        })
+      );
+
+      try {
         const data = {
-          outlet_id: String(currentOutletId),
           order_id: String(orderId),
-          menu_items: [menuItem],
-          menu_status: "served",
+          order_status: "served",
+          outlet_id: currentOutletId,
+          user_id: userId,
+          device_token: deviceId,
           app_source: "kds_app",
         };
 
-        const response = await fetch(`${V2_COMMON_BASE}/update_menu_status`, {
+        const response = await fetch(`${V2_COMMON_BASE}/update_order_status`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -466,32 +478,113 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         if (!response.ok) {
           if (response.status === 401) {
             const ok = await refreshToken();
-            if (ok) return handleServeMenuItem(orderId, menu);
+            if (ok) {
+              servingMenuItemsRef.current.delete(menuKey);
+              return handleServeMenuItem(orderId, menu);
+            }
             navigate("/login");
             return;
           }
           const errorText = await response.text();
           throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
-
-        // Update local state immediately for responsive UI
-        setCookingOrders((prev) =>
-          prev.map((order) => {
-            if (order.order_id !== orderId) return order;
-            if (!Array.isArray(order.menu_details)) return order;
-            const updatedMenus = order.menu_details.map((m) =>
-              String(m.menu_id) === String(menu.menu_id) ? { ...m, menu_status: "served" } : m
-            );
-            return { ...order, menu_details: updatedMenus };
-          })
-        );
       } catch (error) {
         console.error("Error updating menu item status:", error.message);
-        // Fallback to refetch to reconcile with server
+        // Revert optimistic update on error
+        setCookingOrders((prev) =>
+          prev.map((order) => {
+            if (String(order.order_id) !== String(orderId)) return order;
+            if (!Array.isArray(order.menu_details)) return order;
+            const revertedMenus = order.menu_details.map((m) =>
+              String(m.menu_id) === String(menu.menu_id) ? { ...m, menu_status: "cooking" } : m
+            );
+            return { ...order, menu_details: revertedMenus };
+          })
+        );
         refetch();
+      } finally {
+        servingMenuItemsRef.current.delete(menuKey);
       }
     },
-    [accessToken, currentOutletId, navigate, refetch, refreshToken]
+    [accessToken, currentOutletId, deviceId, navigate, refetch, refreshToken, userId]
+  );
+
+  // Update a single combo item status using update_order_status API
+  const handleServeComboItem = useCallback(
+    async (orderId, combo) => {
+      if (!accessToken || !orderId || !combo || !combo.combo_id) {
+        navigate("/login");
+        return;
+      }
+
+      // Prevent double-clicks
+      const comboKey = `combo_${orderId}_${combo.combo_id}`;
+      if (servingMenuItemsRef.current.has(comboKey)) return;
+      servingMenuItemsRef.current.add(comboKey);
+
+      // Optimistic UI update BEFORE the API call
+      setCookingOrders((prev) =>
+        prev.map((order) => {
+          if (String(order.order_id) !== String(orderId)) return order;
+          if (!Array.isArray(order.combo_details)) return order;
+          const updatedCombos = order.combo_details.map((c) =>
+            String(c.combo_id) === String(combo.combo_id) ? { ...c, menu_status: "served" } : c
+          );
+          return { ...order, combo_details: updatedCombos };
+        })
+      );
+
+      try {
+        const data = {
+          order_id: String(orderId),
+          order_status: "served",
+          outlet_id: currentOutletId,
+          user_id: userId,
+          device_token: deviceId,
+          app_source: "kds_app",
+        };
+
+        const response = await fetch(`${V2_COMMON_BASE}/update_order_status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            const ok = await refreshToken();
+            if (ok) {
+              servingMenuItemsRef.current.delete(comboKey);
+              return handleServeComboItem(orderId, combo);
+            }
+            navigate("/login");
+            return;
+          }
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+      } catch (error) {
+        console.error("Error updating combo item status:", error.message);
+        // Revert optimistic update on error
+        setCookingOrders((prev) =>
+          prev.map((order) => {
+            if (String(order.order_id) !== String(orderId)) return order;
+            if (!Array.isArray(order.combo_details)) return order;
+            const revertedCombos = order.combo_details.map((c) =>
+              String(c.combo_id) === String(combo.combo_id) ? { ...c, menu_status: "cooking" } : c
+            );
+            return { ...order, combo_details: revertedCombos };
+          })
+        );
+        refetch();
+      } finally {
+        servingMenuItemsRef.current.delete(comboKey);
+      }
+    },
+    [accessToken, currentOutletId, deviceId, navigate, refetch, refreshToken, userId]
   );
 
   useImperativeHandle(ref, () => ({
@@ -688,11 +781,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                 <div className="flex justify-between items-center flex-wrap gap-1 md:gap-0">
                   <p className="text-xl md:text-2xl font-bold mb-0 flex items-center">
                     <i className="bx bx-hash mr-1"></i>{order.order_number}
-                    {order.combo_count > 0 && (
-                      <span className="ml-2 text-blue-600 text-sm md:text-base font-semibold">
-                        (+{order.combo_count} Combo)
-                      </span>
-                    )}
+
                   </p>
                   <p className="mb-0 text-base md:text-xl capitalize font-semibold">
                     {order.section_name
@@ -737,7 +826,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                             className={`font-semibold capitalize text-[12px] sm:text-[12px] md:text-[14px] lg:text-[18px] ${isNewItem ? "text-red-500" : ""
                               }`}
                           >
-                            {menu.half_or_full}
+                            {menu.half_or_full && menu.half_or_full.toLowerCase() !== 'combo' && menu.half_or_full}
                           </div>
                           <div
                             className="flex items-center text-right gap-1 md:gap-2 pr-2.5"
@@ -771,6 +860,56 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                   </div>
                 )}
 
+                {/* Render combo items from combo_details */}
+                {Array.isArray(order.combo_details) && order.combo_details.length > 0 && (
+                  <div>
+                    {order.combo_details.map((combo, index) => {
+                      const comboHrColor =
+                        foodTypeColors[(combo.combo_food_type || "").toLowerCase()] || "#f21717";
+
+                      return (
+                        <div
+                          className={`flex flex-wrap justify-between items-center ${type === "placed" ? "border-l-[3px]" : ""} pl-2 mb-0 ${borderColorClass}`}
+                          key={`combo-${index}`}
+                        >
+                          <div className="flex font-semibold capitalize items-center flex-auto min-w-[120px] text-[14px] sm:text-[14px] md:text-[16px] lg:text-[18px]">
+                            <hr
+                              className="h-[10px] w-[3px] mr-[5px] p-0 border-0"
+                              style={{ backgroundColor: comboHrColor }}
+                            />
+                            <p className="mb-0 p-0">{combo.combo_name}</p>
+                          </div>
+                          <div className="font-semibold capitalize text-[12px] sm:text-[12px] md:text-[14px] lg:text-[18px]">
+                          </div>
+                          <div className="flex items-center text-right gap-1 md:gap-2 pr-2.5">
+                            <span className="font-semibold text-[14px] sm:text-[14px] md:text-[16px] lg:text-[18px]">
+                              × {combo.quantity}
+                            </span>
+                            {manualMode &&
+                              type === "warning" &&
+                              !isSuperOwner &&
+                              order.kds_button_enabled === 1 &&
+                              (combo.menu_status || "cooking") !== "served" && (
+                                <button
+                                  className="px-2 py-1 text-xs sm:text-xs bg-green-800 text-white rounded-3xl hover:bg-green-600 transition-colors"
+                                  onClick={() => handleServeComboItem(order.order_id, combo)}
+                                >
+                                  <span className="hidden sm:inline">Served</span>
+                                  <span className="sm:hidden">✓</span>
+                                </button>
+                              )}
+                          </div>
+                          {combo.comment && (
+                            <div className="w-full text-left text-gray-500 text-xs">
+                              <span>{combo.comment}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {/* Only show Complete Order button if kds_button_enabled = 1 */}
                 {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
                   <button
@@ -794,7 +933,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         );
       });
     },
-    [foodTypeColors, handleServeMenuItem, manualMode, previousMenuItems, updateOrderStatus, userRole]
+    [foodTypeColors, handleServeComboItem, handleServeMenuItem, manualMode, previousMenuItems, updateOrderStatus, userRole]
   );
 
   const outletName = localStorage.getItem("outlet_name");
@@ -852,6 +991,9 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                         menu_details: Array.isArray(o.menu_details)
                           ? o.menu_details.filter((m) => (m.menu_status || "cooking") !== "served")
                           : [],
+                        combo_details: Array.isArray(o.combo_details)
+                          ? o.combo_details.filter((c) => (c.menu_status || "cooking") !== "served")
+                          : [],
                       })),
                       "warning"
                     )}
@@ -880,6 +1022,9 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                           order_status: o.order_status === "served" ? "served" : "cooking",
                           menu_details: Array.isArray(o.menu_details)
                             ? o.menu_details.filter((m) => m.menu_status === "served")
+                            : [],
+                          combo_details: Array.isArray(o.combo_details)
+                            ? o.combo_details.filter((c) => c.menu_status === "served")
                             : [],
                         }));
 
