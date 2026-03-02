@@ -233,12 +233,12 @@ function Header({
                     <div className="flex justify-between items-center gap-4">
                       <button
                         type="button"
-                        className={`flex-1 py-2 rounded-full border border-gray-400 text-gray-500 transition-colors font-medium ${isCancelHovered ? "bg-gray-100 border-gray-500" : "bg-white"}`}
+                        className={`flex-1 py-2 rounded-full border border-gray-400 text-gray-500 transition-colors font-medium flex items-center justify-center gap-2 ${isCancelHovered ? "bg-gray-100 border-gray-500" : "bg-white"}`}
                         onClick={() => handleLogoutConfirm(false)}
                         onMouseEnter={() => setIsCancelHovered(true)}
                         onMouseLeave={() => setIsCancelHovered(false)}
                       >
-                        Cancel
+                        <i className="fa-solid fa-times"></i> Cancel
                       </button>
                       <button
                         type="button"

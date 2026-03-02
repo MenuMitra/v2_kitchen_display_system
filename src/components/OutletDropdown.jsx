@@ -3,6 +3,12 @@ import { V2_COMMON_BASE } from "../config";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "./cache";
 
+const toTitleCase = (str) => {
+  if (!str || typeof str !== "string") return str || "";
+  return str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+
 const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -109,7 +115,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     };
   }, []);
 
-  const selectedLabel = selected && selected.name && String(selected.name).trim().length > 0 ? selected.name : "Select Outlet";
+  const selectedLabel = selected && selected.name && String(selected.name).trim().length > 0 ? toTitleCase(selected.name) : "Select Outlet";
 
   if (hideDropdown && selected) {
     return (
@@ -183,7 +189,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
                       disabled={isInactive}
                     >
                       <div className="flex items-center">
-                        <p className="capitalize m-0 p-0 flex-1 whitespace-normal break-words">{outlet.name}</p>
+                        <p className="m-0 p-0 flex-1 whitespace-normal break-words">{toTitleCase(outlet.name)}</p>
                         {isInactive && (
                           <span className="text-xs ml-2 text-[#a30000] font-semibold">
                             Inactive
@@ -193,9 +199,9 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
                           <span className="text-xs text-gray-500 ml-1">({outlet.outlet_code})</span>
                         )}
                       </div>
-                      {outlet.address && <div className="text-xs capitalize text-gray-500">{outlet.address}</div>}
+                      {outlet.address && <div className="text-xs text-gray-500">{toTitleCase(outlet.address)}</div>}
                       {outlet.owner_name && (
-                        <div className="text-xs text-gray-500">{outlet.owner_name}</div>
+                        <div className="text-xs text-gray-500">{toTitleCase(outlet.owner_name)}</div>
                       )}
                     </button>
                   </li>
