@@ -58,17 +58,21 @@ function Header({
 
   const handleLogout = async () => {
     try {
+      const accessToken = localStorage.getItem("access_token");
       const logoutData = {
         user_id: userId,
         role: "chef",
-        app: "chef",
-        device_token: "some-device-token",
+        app: "kds",
+        device_token: localStorage.getItem("fcm_token") || "some-device-token",
         app_source: "kds_app"
       };
 
       await fetch(`${V2_COMMON_BASE}/logout`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify(logoutData),
       });
 
