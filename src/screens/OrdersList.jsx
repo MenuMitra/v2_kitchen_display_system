@@ -27,8 +27,13 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const [previousMenuItems, setPreviousMenuItems] = useState({});
   const [filter, setFilter] = useState("today");
   const [lastRefreshTime, setLastRefreshTime] = useState(null);
+  const [, setOutletSelectKey] = useState(0); // Forces re-render when outlet selected
 
   const autoProcessingRef = useRef(new Set());
+
+  const onOutletSelect = useCallback(() => {
+    setOutletSelectKey((k) => k + 1);
+  }, []);
   const servingMenuItemsRef = useRef(new Set());
 
   // Helper functions to manage served orders in localStorage
@@ -74,6 +79,10 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const accessToken = localStorage.getItem("access_token");
   const deviceId = localStorage.getItem("device_id");
 
+  // Block orders API until user explicitly selects outlet (prevents API call on login)
+  const isFreshLogin = typeof sessionStorage !== "undefined" && !!sessionStorage.getItem("kds_fresh_login");
+  const shouldFetchOrders = !!accessToken && isValidOutletId && !isFreshLogin;
+
   // TanStack Query: fetch orders every 30s, cached 30s
   // Note: queryKey does NOT include filter to prevent cache invalidation on filter change
   const {
@@ -84,7 +93,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     error: queryError,
   } = useQuery({
     queryKey: ["orders", isValidOutletId ? numericOutletId : null],
-    enabled: !!accessToken && isValidOutletId,
+    enabled: shouldFetchOrders,
     refetchInterval: false,
     queryFn: async () => {
       const response = await fetch(`${V2_COMMON_BASE}/cds_kds_order_listview`, {
@@ -944,7 +953,8 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         outletName={localStorage.getItem("outlet_name") || ""}
         filter={filter}
         onFilterChange={setFilter}
-        onRefresh={handleManualRefresh} // Use separated manual refresh
+        onRefresh={handleManualRefresh}
+        onOutletSelect={onOutletSelect}
         manualMode={manualMode}
         onToggleManualMode={setManualMode}
         selectedOutlet={{ outlet_id: currentOutletId, name: outletName }}

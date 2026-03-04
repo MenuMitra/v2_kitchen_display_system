@@ -84,11 +84,11 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       return;
     }
     localStorage.setItem("outlet_id", outlet.outlet_id);
+    localStorage.setItem("outlet_name", outlet.name);
+    sessionStorage.removeItem("kds_fresh_login"); // Allow orders API after outlet selection
     setSelected(outlet);
     setShow(false);
     setSearchTerm("");
-    localStorage.setItem("outlet_id", outlet.outlet_id);
-    localStorage.setItem("outlet_name", outlet.name);
     if (typeof onSelect === "function") {
       onSelect(outlet);
     }
