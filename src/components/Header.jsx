@@ -79,6 +79,7 @@ function Header({
       localStorage.removeItem("device_id");
       localStorage.removeItem("outlet_id");
       localStorage.removeItem("outlet_name");
+      sessionStorage.removeItem("kds_fresh_login");
 
       navigate("/login");
     } catch (error) {

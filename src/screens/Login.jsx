@@ -139,10 +139,13 @@ function Login() {
         };
 
         Object.entries(userData).forEach(([key, value]) => {
+          if (key === "outlet_id" || key === "outlet_name") return; // Do not set outlet on login - user must select from dropdown
           localStorage.setItem(key, typeof value === "object" ? JSON.stringify(value) : value.toString());
         });
 
-        localStorage.setItem("outlet_id", response.data.outlet_id);
+        localStorage.removeItem("outlet_id");
+        localStorage.removeItem("outlet_name");
+        sessionStorage.setItem("kds_fresh_login", "1"); // Block orders API until outlet selected
         navigate("/orders");
       } else {
         setError("Invalid response from server");
