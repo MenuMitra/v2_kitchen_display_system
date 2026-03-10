@@ -521,13 +521,20 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   // Update a single combo item status using update_order_status API
   const handleServeComboItem = useCallback(
     async (orderId, combo) => {
-      if (!accessToken || !orderId || !combo || !combo.combo_id) {
+      // Only guard on essential auth/order fields here.
+      // Combo items from API use `combo_master_id` (not `combo_id`), so we must NOT
+      // treat missing `combo_id` as an auth failure that forces logout.
+      if (!accessToken || !orderId || !combo) {
         navigate("/login");
         return;
       }
 
+      // Prefer stable combo identifier from API: combo_master_id -> combo_id -> menu_id
+      const comboIdentifier =
+        combo.combo_master_id ?? combo.combo_id ?? combo.menu_id ?? "";
+
       // Prevent double-clicks
-      const comboKey = `combo_${orderId}_${combo.combo_id}`;
+      const comboKey = `combo_${orderId}_${comboIdentifier}`;
       if (servingMenuItemsRef.current.has(comboKey)) return;
       servingMenuItemsRef.current.add(comboKey);
 
@@ -537,7 +544,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
           if (String(order.order_id) !== String(orderId)) return order;
           if (!Array.isArray(order.combo_details)) return order;
           const updatedCombos = order.combo_details.map((c) =>
-            String(c.combo_id) === String(combo.combo_id) ? { ...c, menu_status: "served" } : c
+            String(
+              c.combo_master_id ?? c.combo_id ?? c.menu_id ?? ""
+            ) === String(comboIdentifier)
+              ? { ...c, menu_status: "served" }
+              : c
           );
           return { ...order, combo_details: updatedCombos };
         })
@@ -583,7 +594,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
             if (String(order.order_id) !== String(orderId)) return order;
             if (!Array.isArray(order.combo_details)) return order;
             const revertedCombos = order.combo_details.map((c) =>
-              String(c.combo_id) === String(combo.combo_id) ? { ...c, menu_status: "cooking" } : c
+              String(
+                c.combo_master_id ?? c.combo_id ?? c.menu_id ?? ""
+              ) === String(comboIdentifier)
+                ? { ...c, menu_status: "cooking" }
+                : c
             );
             return { ...order, combo_details: revertedCombos };
           })
