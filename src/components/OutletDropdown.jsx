@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { V2_COMMON_BASE } from "../config";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "./cache";
@@ -17,6 +17,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [hideDropdown, setHideDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const [kdsStatusByOutletId, setKdsStatusByOutletId] = useState({});
 
   // Sync local selected state with selectedOutlet prop
   useEffect(() => {
@@ -51,6 +52,90 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     },
   });
 
+  const outletIdsKey = useMemo(() => {
+    if (!Array.isArray(outletsData)) return "";
+    return outletsData
+      .map((o) => o?.outlet_id)
+      .filter((id) => id !== null && id !== undefined)
+      .join(",");
+  }, [outletsData]);
+
+  // Preload "KDS assigned?" status per outlet by probing cds_kds_order_listview once.
+  // If API says "KDS module has not been assigned for this outlet", mark that outlet as disabled.
+  // This is cached by React Query and prevents users from selecting unsupported outlets.
+  const { isLoading: isKdsStatusLoading } = useQuery({
+    queryKey: ["outlet_kds_assigned", userId, outletIdsKey],
+    enabled: !!token && Array.isArray(outletsData) && outletsData.length > 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const ids = Array.isArray(outletsData)
+        ? outletsData
+            .map((o) => o?.outlet_id)
+            .filter((id) => id !== null && id !== undefined)
+        : [];
+
+      const results = {};
+
+      // Simple concurrency limiter to avoid spamming the backend
+      const concurrency = 5;
+      let index = 0;
+      const worker = async () => {
+        while (index < ids.length) {
+          const current = ids[index++];
+          try {
+            const res = await fetch(`${V2_COMMON_BASE}/cds_kds_order_listview`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ outlet_id: current, date_filter: "today" }),
+            });
+
+            // If auth fails, treat as unknown; OrdersList will handle redirect.
+            if (res.status === 401) {
+              results[String(current)] = { assigned: true };
+              continue;
+            }
+
+            const json = await res.json().catch(() => ({}));
+            const detail = typeof json?.detail === "string" ? json.detail : "";
+            const notAssigned =
+              detail.toLowerCase().includes("kds module has not been assigned");
+
+            results[String(current)] = notAssigned
+              ? { assigned: false, reason: "KDS module not assigned" }
+              : { assigned: true };
+          } catch (e) {
+            // Network error: don't block selection; allow user to try.
+            results[String(current)] = { assigned: true };
+          }
+        }
+      };
+
+      await Promise.all(Array.from({ length: Math.min(concurrency, ids.length) }, () => worker()));
+      return results;
+    },
+  });
+
+  useEffect(() => {
+    if (outletIdsKey && typeof outletIdsKey === "string") {
+      const cached = queryClient.getQueryData(["outlet_kds_assigned", userId, outletIdsKey]);
+      if (cached && typeof cached === "object") {
+        setKdsStatusByOutletId(cached);
+      }
+    }
+  }, [outletIdsKey, userId]);
+
+  // Keep local state in sync when query resolves
+  useEffect(() => {
+    const cached = queryClient.getQueryData(["outlet_kds_assigned", userId, outletIdsKey]);
+    if (cached && typeof cached === "object") {
+      setKdsStatusByOutletId(cached);
+    }
+  }, [isKdsStatusLoading, outletIdsKey, userId]);
+
   useEffect(() => {
     setLoading(isLoading);
     if (Array.isArray(outletsData)) {
@@ -59,7 +144,9 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       if (outletsData.length === 1) {
         const singleOutlet = outletsData[0];
         // If the only outlet is inactive, don't auto-select and keep dropdown visible
-        if (singleOutlet && singleOutlet.outlet_status === 0) {
+        const kdsStatus = kdsStatusByOutletId?.[String(singleOutlet?.outlet_id)];
+        const isKdsNotAssigned = kdsStatus && kdsStatus.assigned === false;
+        if (singleOutlet && (singleOutlet.outlet_status === 0 || isKdsNotAssigned)) {
           setHideDropdown(false);
         } else {
           setHideDropdown(true);
@@ -69,7 +156,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
         setHideDropdown(false);
       }
     }
-  }, [isLoading, outletsData]);
+  }, [isLoading, outletsData, kdsStatusByOutletId]);
 
   // Filter outlets by search term
   const filteredOutlets = outlets.filter((outlet) =>
@@ -81,6 +168,10 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     console.log("handleSelect", outlet);
     // Block selection for inactive outlets
     if (outlet && outlet.outlet_status === 0) {
+      return;
+    }
+    const kdsStatus = kdsStatusByOutletId?.[String(outlet?.outlet_id)];
+    if (kdsStatus && kdsStatus.assigned === false) {
       return;
     }
     localStorage.setItem("outlet_id", outlet.outlet_id);
@@ -176,23 +267,50 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
             {!loading &&
               filteredOutlets.map((outlet, index) => {
                 const isInactive = outlet && outlet.outlet_status === 0;
+                const kdsStatus = kdsStatusByOutletId?.[String(outlet?.outlet_id)];
+                const isKdsNotAssigned = kdsStatus && kdsStatus.assigned === false;
+                const isDisabled = isInactive || isKdsNotAssigned;
                 const isSelected = selected && selected.outlet_id === outlet.outlet_id;
                 return (
                   <li
-                    className={`p-1 m-1 border-[1.5px] rounded-[10px] transition-all duration-150 ${isInactive ? "bg-[#ffe6e6] border-[#ffe6e6]" : "bg-[#f8f9fa] border-[#bbb] hover:bg-white hover:border-[#0d6efd] hover:shadow-[0_4px_16px_rgba(13,110,253,0.18)]"}`}
+                    className={`p-1 m-1 border-[1.5px] rounded-[10px] transition-all duration-150 ${
+                      isDisabled
+                        ? isInactive
+                          ? "bg-[#ffe6e6] border-[#ffe6e6] opacity-70"
+                          : "bg-[#f1f1f1] border-[#ddd] opacity-70"
+                        : "bg-[#f8f9fa] border-[#bbb] hover:bg-white hover:border-[#0d6efd] hover:shadow-[0_4px_16px_rgba(13,110,253,0.18)]"
+                    }`}
                     key={`${outlet.outlet_id}-${index}`}
                   >
                     <button
                       type="button"
-                      className={`w-full p-1 m-0 text-left whitespace-normal border-none bg-transparent rounded-lg text-base ${isSelected ? "font-bold text-gray-800 bg-blue-100" : isInactive ? "text-[#a30000] cursor-not-allowed" : "text-gray-800"}`}
+                      className={`w-full p-1 m-0 text-left whitespace-normal border-none bg-transparent rounded-lg text-base ${
+                        isSelected
+                          ? "font-bold text-gray-800 bg-blue-100"
+                          : isDisabled
+                            ? "text-gray-500 cursor-not-allowed"
+                            : "text-gray-800"
+                      }`}
                       onClick={() => handleSelect(outlet)}
-                      disabled={isInactive}
+                      disabled={isDisabled}
+                      title={
+                        isKdsNotAssigned
+                          ? "KDS module not assigned"
+                          : isInactive
+                            ? "Outlet inactive"
+                            : ""
+                      }
                     >
                       <div className="flex items-center">
                         <p className="m-0 p-0 flex-1 whitespace-normal break-words">{toTitleCase(outlet.name)}</p>
                         {isInactive && (
                           <span className="text-xs ml-2 text-[#a30000] font-semibold">
                             Inactive
+                          </span>
+                        )}
+                        {isKdsNotAssigned && (
+                          <span className="text-xs ml-2 text-gray-600 font-semibold">
+                            No KDS
                           </span>
                         )}
                         {outlet.outlet_code && (
