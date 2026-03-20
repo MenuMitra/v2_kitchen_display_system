@@ -143,14 +143,24 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       console.log("outletsData", outletsData);
       if (outletsData.length === 1) {
         const singleOutlet = outletsData[0];
-        // If the only outlet is inactive, don't auto-select and keep dropdown visible
-        const kdsStatus = kdsStatusByOutletId?.[String(singleOutlet?.outlet_id)];
-        const isKdsNotAssigned = kdsStatus && kdsStatus.assigned === false;
-        if (singleOutlet && (singleOutlet.outlet_status === 0 || isKdsNotAssigned)) {
-          setHideDropdown(false);
-        } else {
+        const singleOutletId = String(singleOutlet?.outlet_id);
+        const singleKdsStatus = kdsStatusByOutletId?.[singleOutletId];
+        const isSingleKdsStatusKnown = singleKdsStatus && typeof singleKdsStatus.assigned === "boolean";
+
+        // Avoid auto-selecting before KDS status is loaded.
+        // Otherwise OrdersList will start calling cds_kds_order_listview and spam 400 for invalid outlets.
+        const isSingleKdsNotAssigned = isSingleKdsStatusKnown ? singleKdsStatus.assigned === false : false;
+        const shouldAutoSelect =
+          singleOutlet &&
+          singleOutlet.outlet_status !== 0 &&
+          isSingleKdsStatusKnown &&
+          !isSingleKdsNotAssigned;
+
+        if (shouldAutoSelect) {
           setHideDropdown(true);
           handleSelect(singleOutlet);
+        } else {
+          setHideDropdown(false);
         }
       } else {
         setHideDropdown(false);
@@ -170,10 +180,18 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     if (outlet && outlet.outlet_status === 0) {
       return;
     }
-    const kdsStatus = kdsStatusByOutletId?.[String(outlet?.outlet_id)];
-    if (kdsStatus && kdsStatus.assigned === false) {
+
+    const outletIdStr = String(outlet?.outlet_id);
+    const kdsStatus = kdsStatusByOutletId?.[outletIdStr];
+    const isKdsStatusKnown = kdsStatus && typeof kdsStatus.assigned === "boolean";
+
+    // If we haven't finished checking KDS assignment yet, block selection
+    // to avoid loading OrdersList with an outlet that will 400.
+    if (!isKdsStatusKnown && isKdsStatusLoading) {
       return;
     }
+
+    if (kdsStatus && kdsStatus.assigned === false) return;
     localStorage.setItem("outlet_id", outlet.outlet_id);
     localStorage.setItem("outlet_name", outlet.name);
     sessionStorage.removeItem("kds_fresh_login"); // Allow orders API after outlet selection
@@ -268,8 +286,10 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
               filteredOutlets.map((outlet, index) => {
                 const isInactive = outlet && outlet.outlet_status === 0;
                 const kdsStatus = kdsStatusByOutletId?.[String(outlet?.outlet_id)];
-                const isKdsNotAssigned = kdsStatus && kdsStatus.assigned === false;
-                const isDisabled = isInactive || isKdsNotAssigned;
+                const isKdsStatusKnown = kdsStatus && typeof kdsStatus.assigned === "boolean";
+                const isKdsNotAssigned = isKdsStatusKnown && kdsStatus.assigned === false;
+                const isKdsStatusUnknownAndLoading = !isKdsStatusKnown && isKdsStatusLoading;
+                const isDisabled = isInactive || isKdsNotAssigned || isKdsStatusUnknownAndLoading;
                 const isSelected = selected && selected.outlet_id === outlet.outlet_id;
                 return (
                   <li
@@ -298,7 +318,9 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
                           ? "KDS module not assigned"
                           : isInactive
                             ? "Outlet inactive"
-                            : ""
+                            : isKdsStatusUnknownAndLoading
+                              ? "Checking KDS assignment..."
+                              : ""
                       }
                     >
                       <div className="flex items-center">
@@ -312,6 +334,9 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
                           <span className="text-xs ml-2 text-gray-600 font-semibold">
                             No KDS
                           </span>
+                        )}
+                        {isKdsStatusUnknownAndLoading && (
+                          <span className="text-xs ml-2 text-gray-500 font-semibold">...</span>
                         )}
                         {outlet.outlet_code && (
                           <span className="text-xs text-gray-500 ml-1">({outlet.outlet_code})</span>
