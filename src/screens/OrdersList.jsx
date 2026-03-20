@@ -31,6 +31,70 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
   const autoProcessingRef = useRef(new Set());
 
+  // Backend may return inconsistent item-level statuses during refresh.
+  // Remember which specific menu/combo items the user marked as "served",
+  // and re-apply those overrides to every cds_kds_order_listview response.
+  const locallyServedItemsRef = useRef(new Map());
+  const getLocalServedEntry = (orderId) => {
+    const key = String(orderId);
+    let entry = locallyServedItemsRef.current.get(key);
+    if (!entry) {
+      entry = { menuIds: new Set(), comboIds: new Set() };
+      locallyServedItemsRef.current.set(key, entry);
+    }
+    return entry;
+  };
+  const markLocalMenuServed = (orderId, menuId) => {
+    if (!orderId || !menuId) return;
+    getLocalServedEntry(orderId).menuIds.add(String(menuId));
+  };
+  const unmarkLocalMenuServed = (orderId, menuId) => {
+    if (!orderId || !menuId) return;
+    const entry = locallyServedItemsRef.current.get(String(orderId));
+    if (!entry) return;
+    entry.menuIds.delete(String(menuId));
+  };
+  const markLocalComboServed = (orderId, comboIdentifier) => {
+    if (!orderId || !comboIdentifier) return;
+    getLocalServedEntry(orderId).comboIds.add(String(comboIdentifier));
+  };
+  const unmarkLocalComboServed = (orderId, comboIdentifier) => {
+    if (!orderId || !comboIdentifier) return;
+    const entry = locallyServedItemsRef.current.get(String(orderId));
+    if (!entry) return;
+    entry.comboIds.delete(String(comboIdentifier));
+  };
+  const applyLocalServedOverridesToOrder = (order) => {
+    if (!order || !order.order_id) return order;
+    const orderKey = String(order.order_id);
+    const entry = locallyServedItemsRef.current.get(orderKey);
+    if (!entry) return order;
+
+    let next = order;
+
+    if (Array.isArray(order.menu_details) && entry.menuIds.size > 0) {
+      next = {
+        ...next,
+        menu_details: order.menu_details.map((m) => {
+          const id = m?.menu_id ?? "";
+          return entry.menuIds.has(String(id)) ? { ...m, menu_status: "served" } : m;
+        }),
+      };
+    }
+
+    if (Array.isArray(order.combo_details) && entry.comboIds.size > 0) {
+      next = {
+        ...next,
+        combo_details: order.combo_details.map((c) => {
+          const id = c?.combo_master_id ?? c?.combo_id ?? c?.menu_id ?? "";
+          return entry.comboIds.has(String(id)) ? { ...c, menu_status: "served" } : c;
+        }),
+      };
+    }
+
+    return next;
+  };
+
   const onOutletSelect = useCallback(() => {
     setOutletSelectKey((k) => k + 1);
   }, []);
@@ -114,6 +178,13 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
           subscription_details: null,
         };
       }
+      if (!response.ok) {
+        // e.g. 400 when KDS is not assigned for this outlet
+        const json = await response.json().catch(() => ({}));
+        const detail = typeof json?.detail === "string" ? json.detail : `HTTP ${response.status}`;
+        throw new Error(detail);
+      }
+
       const result = await response.json();
       return result || {};
     },
@@ -297,7 +368,8 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       return;
     }
     if (queryError) {
-      setError("Error fetching orders");
+      const message = typeof queryError?.message === "string" ? queryError.message : "Error fetching orders";
+      setError(message);
       setInitialLoading(false);
       return;
     }
@@ -328,20 +400,58 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
           ? orders.filter((order) => !optimisticOrders.has(String(order.order_id)))
           : [];
 
+      // Apply locally-served item overrides to every order from the server.
+      // This prevents served items from disappearing/reverting after refresh.
+      const withLocalOverrides = (orders) =>
+        Array.isArray(orders) ? orders.map((o) => applyLocalServedOverridesToOrder(o)) : [];
+
+      const placedOrdersFromServer = withLocalOverrides(result.placed_orders);
+      const cookingOrdersFromServer = withLocalOverrides(result.cooking_orders);
+      const paidOrdersFromServer = withLocalOverrides(result.paid_orders);
+      const servedOrdersFromServer = withLocalOverrides(result.served_orders);
+
+      const isOrderFullyServed = (order) => {
+        const menus = Array.isArray(order?.menu_details) ? order.menu_details : [];
+        const combos = Array.isArray(order?.combo_details) ? order.combo_details : [];
+        const totalItems = menus.length + combos.length;
+        if (totalItems === 0) return false; // don't promote orders with no items
+
+        const allMenusServed = menus.every((m) => (m?.menu_status || "cooking") === "served");
+        const allCombosServed = combos.every((c) => (c?.menu_status || "cooking") === "served");
+        return allMenusServed && allCombosServed;
+      };
+
+      const promoteOrderToServed = (order) => ({
+        ...order,
+        order_status: "served",
+        menu_details: Array.isArray(order?.menu_details)
+          ? order.menu_details.map((m) => ({ ...m, menu_status: "served" }))
+          : [],
+        combo_details: Array.isArray(order?.combo_details)
+          ? order.combo_details.map((c) => ({ ...c, menu_status: "served" }))
+          : [],
+      });
+
+      // Frontend safeguard: server may keep order_status as "cooking"
+      // even when all items are served. Promote those orders into served.
+      const fullyServedFromCooking = cookingOrdersFromServer.filter(isOrderFullyServed).map(promoteOrderToServed);
+      const remainingCookingOrdersFromServer = cookingOrdersFromServer.filter((o) => !isOrderFullyServed(o));
+
       setPlacedOrders(() => [
-        ...withoutOptimistic(result.placed_orders),
+        ...withoutOptimistic(placedOrdersFromServer),
         ...optimisticByStatus("placed"),
       ]);
       setCookingOrders(() => [
-        ...withoutOptimistic(result.cooking_orders),
+        ...withoutOptimistic(remainingCookingOrdersFromServer),
         ...optimisticByStatus("cooking"),
       ]);
       setPaidOrders(() => [
-        ...withoutOptimistic(result.paid_orders),
+        ...withoutOptimistic(paidOrdersFromServer),
         ...optimisticByStatus("paid"),
       ]);
       setServedOrders(() => {
-        const serverServed = withoutOptimistic(result.served_orders);
+        const promotedAndServerServed = [...fullyServedFromCooking, ...servedOrdersFromServer];
+        const serverServed = withoutOptimistic(promotedAndServerServed);
         const optimisticServed = optimisticByStatus("served");
 
         // Ensure all menu items in served orders have menu_status: "served"
@@ -354,6 +464,12 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                 ...m,
                 menu_status: "served",
               }))
+              : [],
+            combo_details: Array.isArray(order.combo_details)
+              ? order.combo_details.map((c) => ({
+                  ...c,
+                  menu_status: "served",
+                }))
               : [],
           };
         };
@@ -426,14 +542,14 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   // Add periodic refresh for faster updates
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isFetching && !queryLoading) {
+      if (!isFetching && !queryLoading && !queryError) {
         console.log('Periodic refresh triggered...');
         refetch();
       }
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
-  }, [isFetching, queryLoading, refetch]);
+  }, [isFetching, queryLoading, queryError, refetch]);
 
   // Refetch when filter changes
   useEffect(() => {
@@ -454,6 +570,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       servingMenuItemsRef.current.add(menuKey);
 
       // Optimistic UI update BEFORE the API call
+      markLocalMenuServed(orderId, menu.menu_id);
       setCookingOrders((prev) =>
         prev.map((order) => {
           if (String(order.order_id) !== String(orderId)) return order;
@@ -500,6 +617,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       } catch (error) {
         console.error("Error updating menu item status:", error.message);
         // Revert optimistic update on error
+        unmarkLocalMenuServed(orderId, menu.menu_id);
         setCookingOrders((prev) =>
           prev.map((order) => {
             if (String(order.order_id) !== String(orderId)) return order;
@@ -539,6 +657,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       servingMenuItemsRef.current.add(comboKey);
 
       // Optimistic UI update BEFORE the API call
+      markLocalComboServed(orderId, comboIdentifier);
       setCookingOrders((prev) =>
         prev.map((order) => {
           if (String(order.order_id) !== String(orderId)) return order;
@@ -589,6 +708,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       } catch (error) {
         console.error("Error updating combo item status:", error.message);
         // Revert optimistic update on error
+        unmarkLocalComboServed(orderId, comboIdentifier);
         setCookingOrders((prev) =>
           prev.map((order) => {
             if (String(order.order_id) !== String(orderId)) return order;
@@ -777,6 +897,17 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
           visibleMenus = visibleMenus.filter((m) => m.menu_status === "served");
         }
 
+        // Filter combos per section (used for "should we render this card?" only)
+        // Combo rendering itself uses `order.combo_details` that is already filtered in parent.
+        let visibleCombos = Array.isArray(order.combo_details) ? order.combo_details : [];
+        if (type === "warning") {
+          visibleCombos = visibleCombos.filter(
+            (c) => (c.menu_status || "cooking") !== "served"
+          );
+        } else if (type === "success") {
+          visibleCombos = visibleCombos.filter((c) => c.menu_status === "served");
+        }
+
         // Sort: new items first in Cooking
         if (type === "warning" && prevMenuItems.length) {
           visibleMenus = [...visibleMenus].sort((a, b) => {
@@ -794,7 +925,13 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
           (type === "warning" && order.order_status === "cooking") ||
           (type === "success" && order.order_status === "served");
 
-        if (!visibleMenus.length && !isPrimaryColumn) return null;
+        // Cooking stage must never show an "empty" card.
+        // If all items are served, hide it even if server order_status is stale.
+        if (type === "warning" && !visibleMenus.length && !visibleCombos.length) return null;
+
+        // If there are no visible menu items but there are visible combo items,
+        // we still need to render the card (otherwise served combos won't show in Pickup).
+        if (!visibleMenus.length && !visibleCombos.length && !isPrimaryColumn) return null;
 
         return (
           <div className="w-full" key={order.order_id}>
