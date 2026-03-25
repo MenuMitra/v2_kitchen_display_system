@@ -86,7 +86,14 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       next = {
         ...next,
         combo_details: order.combo_details.map((c) => {
-          const id = c?.combo_master_id ?? c?.combo_id ?? c?.menu_id ?? "";
+          // Use the per-order unique mapping id when available.
+          // This prevents accidentally serving multiple combos with the same `combo_master_id`.
+          const id =
+            c?.order_combo_mapping_id ??
+            c?.combo_master_id ??
+            c?.combo_id ??
+            c?.menu_id ??
+            "";
           return entry.comboIds.has(String(id)) ? { ...c, menu_status: "served" } : c;
         }),
       };
@@ -96,6 +103,9 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   };
 
   const onOutletSelect = useCallback(() => {
+    // Clear local item-serving overrides when switching outlets to avoid
+    // stale served state leaking across outlets.
+    locallyServedItemsRef.current = new Map();
     setOutletSelectKey((k) => k + 1);
   }, []);
   const servingMenuItemsRef = useRef(new Set());
@@ -201,7 +211,6 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     if (!orderId) return;
     optimisticOrdersRef.current.delete(String(orderId));
   }, []);
-
   // Update orders lists locally for immediate UI update on status change
   const updateOrdersStateLocal = useCallback((orderId, nextStatus) => {
     if (!orderId) return;
@@ -647,9 +656,14 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         return;
       }
 
-      // Prefer stable combo identifier from API: combo_master_id -> combo_id -> menu_id
+      // Prefer per-order unique identifier when available.
+      // Backend provides `order_combo_mapping_id` inside combo_details.
       const comboIdentifier =
-        combo.combo_master_id ?? combo.combo_id ?? combo.menu_id ?? "";
+        combo?.order_combo_mapping_id ??
+        combo?.combo_master_id ??
+        combo?.combo_id ??
+        combo?.menu_id ??
+        "";
 
       // Prevent double-clicks
       const comboKey = `combo_${orderId}_${comboIdentifier}`;
@@ -664,7 +678,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
           if (!Array.isArray(order.combo_details)) return order;
           const updatedCombos = order.combo_details.map((c) =>
             String(
-              c.combo_master_id ?? c.combo_id ?? c.menu_id ?? ""
+              c?.order_combo_mapping_id ??
+                c?.combo_master_id ??
+                c?.combo_id ??
+                c?.menu_id ??
+                ""
             ) === String(comboIdentifier)
               ? { ...c, menu_status: "served" }
               : c
@@ -715,7 +733,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
             if (!Array.isArray(order.combo_details)) return order;
             const revertedCombos = order.combo_details.map((c) =>
               String(
-                c.combo_master_id ?? c.combo_id ?? c.menu_id ?? ""
+                c?.order_combo_mapping_id ??
+                  c?.combo_master_id ??
+                  c?.combo_id ??
+                  c?.menu_id ??
+                  ""
               ) === String(comboIdentifier)
                 ? { ...c, menu_status: "cooking" }
                 : c
