@@ -86,8 +86,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       next = {
         ...next,
         combo_details: order.combo_details.map((c) => {
-          // Use the per-order unique mapping id when available.
-          // This prevents accidentally serving multiple combos with the same `combo_master_id`.
+          // Use per-order mapping id first to avoid serving duplicate combo masters together.
           const id =
             c?.order_combo_mapping_id ??
             c?.combo_master_id ??
@@ -103,8 +102,6 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   };
 
   const onOutletSelect = useCallback(() => {
-    // Clear local item-serving overrides when switching outlets to avoid
-    // stale served state leaking across outlets.
     locallyServedItemsRef.current = new Map();
     setOutletSelectKey((k) => k + 1);
   }, []);
@@ -594,6 +591,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       try {
         const data = {
           order_id: String(orderId),
+          menu_id: String(menu.menu_id),
           order_status: "served",
           outlet_id: currentOutletId,
           user_id: userId,
@@ -656,8 +654,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         return;
       }
 
-      // Prefer per-order unique identifier when available.
-      // Backend provides `order_combo_mapping_id` inside combo_details.
+      // Prefer per-order unique identifier to avoid duplicate combo collisions.
       const comboIdentifier =
         combo?.order_combo_mapping_id ??
         combo?.combo_master_id ??
@@ -692,9 +689,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       );
 
       try {
+        const orderComboMappingId = combo?.order_combo_mapping_id ?? null;
         const data = {
           order_id: String(orderId),
           order_status: "served",
+          ...(orderComboMappingId ? { order_combo_mapping_id: String(orderComboMappingId) } : {}),
           outlet_id: currentOutletId,
           user_id: userId,
           device_token: deviceId,
