@@ -548,19 +548,23 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   // Add periodic refresh for faster updates
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isFetching && !queryLoading && !queryError) {
+      // Don't force-fetch until outlet is selected and "fresh login" gate is cleared.
+      // React Query `refetch()` bypasses `enabled`, so we must guard here.
+      if (shouldFetchOrders && !isFetching && !queryLoading && !queryError) {
         console.log('Periodic refresh triggered...');
         refetch();
       }
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
-  }, [isFetching, queryLoading, queryError, refetch]);
+  }, [shouldFetchOrders, isFetching, queryLoading, queryError, refetch]);
 
   // Refetch when filter changes
   useEffect(() => {
-    refetch();
-  }, [filter, refetch]);
+    if (shouldFetchOrders) {
+      refetch();
+    }
+  }, [filter, refetch, shouldFetchOrders]);
 
   // Update a single menu item status using update_order_status API
   const handleServeMenuItem = useCallback(
@@ -759,7 +763,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
   // Separate handler for manual refresh button
   const handleManualRefresh = () => {
-    refetch();
+    if (shouldFetchOrders) refetch();
   };
 
   useEffect(() => {

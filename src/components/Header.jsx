@@ -59,9 +59,11 @@ function Header({
   const handleLogout = async () => {
     try {
       const accessToken = localStorage.getItem("access_token");
+      const userRole = localStorage.getItem("user_role") || "chef";
       const logoutData = {
         user_id: userId,
-        role: "chef",
+        // Backend validates that request role matches token role.
+        role: userRole,
         app: "kds",
         device_token: localStorage.getItem("fcm_token") || "some-device-token",
         app_source: "kds_app"
