@@ -107,35 +107,40 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   }, []);
   const servingMenuItemsRef = useRef(new Set());
 
-  // Helper functions to manage served orders in localStorage
+  const getServedOrdersStorageKey = useCallback(() => {
+    const outletId = localStorage.getItem("outlet_id") || "none";
+    return `kds_served_orders_${outletId}`;
+  }, []);
+
+  // Helper functions to manage served orders in localStorage (scoped per outlet)
   const getLocalServedOrders = useCallback(() => {
     try {
-      const stored = localStorage.getItem("kds_served_orders");
+      const stored = localStorage.getItem(getServedOrdersStorageKey());
       return stored ? JSON.parse(stored) : {};
     } catch {
       return {};
     }
-  }, []);
+  }, [getServedOrdersStorageKey]);
 
   const saveLocalServedOrder = useCallback((order) => {
     try {
       const served = getLocalServedOrders();
       served[String(order.order_id)] = order;
-      localStorage.setItem("kds_served_orders", JSON.stringify(served));
+      localStorage.setItem(getServedOrdersStorageKey(), JSON.stringify(served));
     } catch (e) {
       console.error("Error saving served order:", e);
     }
-  }, [getLocalServedOrders]);
+  }, [getLocalServedOrders, getServedOrdersStorageKey]);
 
   const removeLocalServedOrder = useCallback((orderId) => {
     try {
       const served = getLocalServedOrders();
       delete served[String(orderId)];
-      localStorage.setItem("kds_served_orders", JSON.stringify(served));
+      localStorage.setItem(getServedOrdersStorageKey(), JSON.stringify(served));
     } catch (e) {
       console.error("Error removing served order:", e);
     }
-  }, [getLocalServedOrders]);
+  }, [getLocalServedOrders, getServedOrdersStorageKey]);
 
   const [manualMode, setManualMode] = useState(() => {
     const saved = localStorage.getItem("kds_manual_mode");
@@ -153,6 +158,28 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   // Block orders API until user explicitly selects outlet (prevents API call on login)
   const isFreshLogin = typeof sessionStorage !== "undefined" && !!sessionStorage.getItem("kds_fresh_login");
   const shouldFetchOrders = !!accessToken && isValidOutletId && !isFreshLogin;
+
+  const previousOutletRef = useRef(currentOutletId);
+
+  // Reset UI state immediately when outlet changes to avoid stale cards from previous outlet.
+  useEffect(() => {
+    if (previousOutletRef.current === currentOutletId) return;
+    previousOutletRef.current = currentOutletId;
+
+    optimisticOrdersRef.current = new Map();
+    locallyServedItemsRef.current = new Map();
+    autoProcessingRef.current = new Set();
+
+    setPlacedOrders([]);
+    setCookingOrders([]);
+    setPaidOrders([]);
+    setServedOrders([]);
+    setPreviousMenuItems({});
+    setSubscriptionData(null);
+    setLastRefreshTime(null);
+    setError(null);
+    setInitialLoading(shouldFetchOrders);
+  }, [currentOutletId, shouldFetchOrders]);
 
   // TanStack Query: fetch orders every 30s, cached 30s
   // Note: queryKey does NOT include filter to prevent cache invalidation on filter change
@@ -548,19 +575,23 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   // Add periodic refresh for faster updates
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isFetching && !queryLoading && !queryError) {
+      // Don't force-fetch until outlet is selected and "fresh login" gate is cleared.
+      // React Query `refetch()` bypasses `enabled`, so we must guard here.
+      if (shouldFetchOrders && !isFetching && !queryLoading && !queryError) {
         console.log('Periodic refresh triggered...');
         refetch();
       }
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
-  }, [isFetching, queryLoading, queryError, refetch]);
+  }, [shouldFetchOrders, isFetching, queryLoading, queryError, refetch]);
 
   // Refetch when filter changes
   useEffect(() => {
-    refetch();
-  }, [filter, refetch]);
+    if (shouldFetchOrders) {
+      refetch();
+    }
+  }, [filter, refetch, shouldFetchOrders]);
 
   // Update a single menu item status using update_order_status API
   const handleServeMenuItem = useCallback(
@@ -759,7 +790,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
   // Separate handler for manual refresh button
   const handleManualRefresh = () => {
-    refetch();
+    if (shouldFetchOrders) refetch();
   };
 
   useEffect(() => {
@@ -783,8 +814,28 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         return;
       }
 
-      // Start countdown from 90 seconds immediately
-      setTimeLeft(90);
+      // If backend has already disabled KDS buttons, hide the counter.
+      if (order.kds_button_enabled !== 1) {
+        setIsExpired(true);
+        return;
+      }
+
+      // Initialize countdown based on server order creation time.
+      // Start from remaining seconds inside the 90s window.
+      const createdAtMs = new Date(order.date_time).getTime();
+      if (Number.isNaN(createdAtMs)) {
+        setIsExpired(true);
+        return;
+      }
+      const elapsedSeconds = Math.floor((Date.now() - createdAtMs) / 1000);
+      const remainingSeconds = 90 - elapsedSeconds;
+
+      if (remainingSeconds <= 0) {
+        setIsExpired(true);
+        return;
+      }
+
+      setTimeLeft(remainingSeconds);
       setIsExpired(false);
 
       const tick = () => {
@@ -799,7 +850,6 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         });
       };
 
-      // Start the countdown immediately
       timerRef.current = setInterval(tick, 1000);
 
       return () => {
@@ -807,7 +857,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
           clearInterval(timerRef.current);
         }
       };
-    }, [orderId, order?.date_time]);
+    }, [orderId, order?.date_time, order?.kds_button_enabled]);
 
     if (isExpired) return null;
 

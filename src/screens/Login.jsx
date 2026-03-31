@@ -86,30 +86,10 @@ function Login() {
     return Array.from({ length }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join("");
   };
 
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) value = value[0];
-    if (!/^\d*$/.test(value)) return;
-
-    const newOtpValues = [...otpValues];
-    newOtpValues[index] = value;
-    setOtpValues(newOtpValues);
-
-    if (value !== "" && index < 3) {
-      otpRefs[index + 1].current.focus();
-    }
-  };
-
-  const handleKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otpValues[index] && index > 0) {
-      otpRefs[index - 1].current.focus();
-    }
-  };
-
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
+  const verifyOtp = async (otp) => {
+    if (loading) return;
     setError("");
 
-    const otp = otpValues.join("");
     if (!otp || otp.length !== 4) {
       setError("Please enter a valid 4-digit OTP");
       return;
@@ -155,6 +135,37 @@ function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) value = value[0];
+    if (!/^\d*$/.test(value)) return;
+
+    const newOtpValues = [...otpValues];
+    newOtpValues[index] = value;
+    setOtpValues(newOtpValues);
+
+    if (value !== "" && index < 3) {
+      otpRefs[index + 1].current.focus();
+    }
+
+    // Auto-verify when all 4 digits are entered
+    const otp = newOtpValues.join("");
+    if (showOtpInput && otp.length === 4 && !loading) {
+      verifyOtp(otp);
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !otpValues[index] && index > 0) {
+      otpRefs[index - 1].current.focus();
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    const otp = otpValues.join("");
+    await verifyOtp(otp);
   };
 
   return (
