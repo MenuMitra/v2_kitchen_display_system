@@ -1052,7 +1052,14 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                                 backgroundColor: hrColor,
                               }}
                             />
-                            <p className="mb-0 p-0">{menu.menu_name}</p>
+                            <p className="mb-0 p-0">
+                              {menu.menu_name}
+                              {menu.portions_name ? (
+                                <span className="text-gray-400 font-medium ml-2">
+                                  - <span className="capitalize">{menu.portions_name}</span>
+                                </span>
+                              ) : null}
+                            </p>
                           </div>
                           <div
                             className={`font-semibold capitalize text-[12px] sm:text-[12px] md:text-[14px] lg:text-[18px] ${isNewItem ? "text-red-500" : ""
