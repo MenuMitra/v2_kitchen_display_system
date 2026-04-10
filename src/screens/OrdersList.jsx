@@ -76,7 +76,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       next = {
         ...next,
         menu_details: order.menu_details.map((m) => {
-          const id = m?.menu_id ?? "";
+          const id = m?.order_menu_mapping_id ?? m?.menu_id ?? "";
           return entry.menuIds.has(String(id)) ? { ...m, menu_status: "served" } : m;
         }),
       };
@@ -249,6 +249,12 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
           menu_status: "served",
         }));
       }
+      if (nextStatus === "served" && Array.isArray(order.combo_details)) {
+        updatedOrder.combo_details = order.combo_details.map((c) => ({
+          ...c,
+          menu_status: "served",
+        }));
+      }
       return updatedOrder;
     };
 
@@ -365,6 +371,12 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         }
         const errorText = await response.text();
         throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      // Hard-sync after successful "served" transition so Pickup updates immediately
+      // and does not wait for manual refresh/next polling tick.
+      if (nextStatus === "served") {
+        refetch();
       }
     } catch (error) {
       console.error("Error updating order status:", error.message);
@@ -596,24 +608,29 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   // Update a single menu item status using update_order_status API
   const handleServeMenuItem = useCallback(
     async (orderId, menu) => {
-      if (!accessToken || !orderId || !menu || !menu.menu_id) {
+      const menuIdentifier =
+        menu?.order_menu_mapping_id ?? menu?.menu_id ?? null;
+
+      if (!accessToken || !orderId || !menu || !menuIdentifier) {
         navigate("/login");
         return;
       }
 
       // Prevent double-clicks
-      const menuKey = `${orderId}_${menu.menu_id}`;
+      const menuKey = `${orderId}_${menuIdentifier}`;
       if (servingMenuItemsRef.current.has(menuKey)) return;
       servingMenuItemsRef.current.add(menuKey);
 
       // Optimistic UI update BEFORE the API call
-      markLocalMenuServed(orderId, menu.menu_id);
+      markLocalMenuServed(orderId, menuIdentifier);
       setCookingOrders((prev) =>
         prev.map((order) => {
           if (String(order.order_id) !== String(orderId)) return order;
           if (!Array.isArray(order.menu_details)) return order;
           const updatedMenus = order.menu_details.map((m) =>
-            String(m.menu_id) === String(menu.menu_id) ? { ...m, menu_status: "served" } : m
+            String(m?.order_menu_mapping_id ?? m?.menu_id ?? "") === String(menuIdentifier)
+              ? { ...m, menu_status: "served" }
+              : m
           );
           return { ...order, menu_details: updatedMenus };
         })
@@ -622,7 +639,10 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       try {
         const data = {
           order_id: String(orderId),
-          menu_id: String(menu.menu_id),
+          ...(menu?.menu_id ? { menu_id: String(menu.menu_id) } : {}),
+          ...(menu?.order_menu_mapping_id
+            ? { order_menu_mapping_id: String(menu.order_menu_mapping_id) }
+            : {}),
           order_status: "served",
           outlet_id: currentOutletId,
           user_id: userId,
@@ -655,13 +675,15 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       } catch (error) {
         console.error("Error updating menu item status:", error.message);
         // Revert optimistic update on error
-        unmarkLocalMenuServed(orderId, menu.menu_id);
+        unmarkLocalMenuServed(orderId, menuIdentifier);
         setCookingOrders((prev) =>
           prev.map((order) => {
             if (String(order.order_id) !== String(orderId)) return order;
             if (!Array.isArray(order.menu_details)) return order;
             const revertedMenus = order.menu_details.map((m) =>
-              String(m.menu_id) === String(menu.menu_id) ? { ...m, menu_status: "cooking" } : m
+              String(m?.order_menu_mapping_id ?? m?.menu_id ?? "") === String(menuIdentifier)
+                ? { ...m, menu_status: "cooking" }
+                : m
             );
             return { ...order, menu_details: revertedMenus };
           })
