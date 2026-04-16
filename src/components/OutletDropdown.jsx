@@ -8,6 +8,19 @@ const toTitleCase = (str) => {
   return str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
+const isTruthyFlag = (value) =>
+  value === true ||
+  value === 1 ||
+  value === "1" ||
+  String(value).toLowerCase() === "true";
+
+const isOutletInactive = (outlet) => {
+  if (!outlet) return true;
+  const checks = [outlet.outlet_status, outlet.is_outlet_enabled, outlet.is_subscription_active]
+    .filter((v) => v !== undefined && v !== null);
+  return checks.some((v) => !isTruthyFlag(v));
+};
+
 
 const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   const [outlets, setOutlets] = useState([]);
@@ -70,7 +83,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   const handleSelect = (outlet) => {
     console.log("handleSelect", outlet);
     // Block selection for inactive outlets
-    if (outlet && outlet.outlet_status === 0) {
+    if (isOutletInactive(outlet)) {
       return;
     }
     localStorage.setItem("outlet_id", outlet.outlet_id);
@@ -165,7 +178,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
             {loading && <li className="px-4 py-2 text-gray-700">Loading...</li>}
             {!loading &&
               filteredOutlets.map((outlet, index) => {
-                const isInactive = outlet && outlet.outlet_status === 0;
+                const isInactive = isOutletInactive(outlet);
                 const isSelected = selected && selected.outlet_id === outlet.outlet_id;
                 return (
                   <li
@@ -183,7 +196,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
                         <p className="m-0 p-0 flex-1 whitespace-normal break-words">{toTitleCase(outlet.name)}</p>
                         {isInactive && (
                           <span className="text-xs ml-2 text-[#a30000] font-semibold">
-                            Inactive
+                            (Inactive)
                           </span>
                         )}
                         {outlet.outlet_code && (
