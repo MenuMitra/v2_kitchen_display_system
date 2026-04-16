@@ -10,6 +10,7 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const DEFAULT_TOTAL_DAYS = 30;
 
   const authData = localStorage.getItem("authData");
   let token = null;
@@ -71,58 +72,36 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
     }
   }, [propSubscriptionData, subscriptionFromQuery, isLoading, queryError]);
 
-  // Removed today-based calculations; rely only on start_date, end_date, and optional status
-
-  const calculateTotalDays = (startDate, endDate) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = end - start;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(1, diffDays);
+  const parseDateSafe = (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
   };
-
-  // Color and status derived from remaining days
 
   // Hide timeline until outlet is selected
   if (!selectedOutlet || !selectedOutlet.outlet_id) {
     return null;
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-3">
-        <div className="inline-block w-8 h-8 border-4 border-primary border-r-transparent rounded-full animate-spin" role="status">
-          <span className="sr-only">Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-yellow-100 border border-yellow-200 text-yellow-800 text-center py-2 rounded mb-2" role="alert">
-        {error}
-      </div>
-    );
-  }
-
-  if (!subscriptionData) {
-    return (
-      <div className="bg-blue-100 border border-blue-200 text-blue-800 text-center py-2 rounded mb-2" role="alert">
-        No subscription data available
-      </div>
-    );
-  }
-
-  const totalDays = calculateTotalDays(subscriptionData.start_date, subscriptionData.end_date);
-  // startDate currently not used in UI; keep if needed later
-  // const startDate = new Date(subscriptionData.start_date);
-  const endDate = new Date(subscriptionData.end_date);
   const currentDate = new Date();
+  const startDate = parseDateSafe(subscriptionData?.start_date);
+  const endDate = parseDateSafe(subscriptionData?.end_date);
+  const hasValidTimeline = !!startDate && !!endDate && endDate >= startDate;
 
-  const remainingDaysRaw = Math.ceil((endDate - currentDate) / (1000 * 60 * 60 * 24));
+  const totalDays = hasValidTimeline
+    ? Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)))
+    : DEFAULT_TOTAL_DAYS;
+
+  const completedDaysRaw = hasValidTimeline
+    ? Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24))
+    : 0;
+  const completedDays = Math.min(totalDays, Math.max(0, completedDaysRaw));
+
+  const remainingDaysRaw = hasValidTimeline
+    ? Math.ceil((endDate - currentDate) / (1000 * 60 * 60 * 24))
+    : DEFAULT_TOTAL_DAYS;
   const remainingDays = Math.max(0, remainingDaysRaw);
-  const completedDays = Math.max(0, totalDays - remainingDays);
 
   const percentage = totalDays > 0 ? (completedDays / totalDays) * 100 : 0;
 
@@ -133,7 +112,12 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
     color = '#F59E0B';
   }
 
-  return remainingDays <= 5 ? (
+  // Show timeline only when 30 days or less are remaining.
+  if (remainingDays > 30) {
+    return null;
+  }
+
+  return (
     <div className="flex justify-center w-full mb-2.5">
       <div className="bg-white rounded-lg shadow-[0_1px_4px_rgba(80,89,111,0.06)] border border-[#ededed] w-full max-w-[300px] mx-auto">
         <div className="px-3 pt-2 pb-1.5">
@@ -155,10 +139,17 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
             <span className="text-gray-700 font-medium">{completedDays} days completed</span>
             <span className={`font-medium ${remainingDays <= 5 ? 'text-red-500' : 'text-gray-700'}`}>{remainingDays} days remaining</span>
           </div>
+          {loading && <div className="text-[11px] text-gray-400 mt-1">Updating timeline...</div>}
+          {!hasValidTimeline && (
+            <div className="text-[11px] text-gray-400 mt-1">
+              Using default {DEFAULT_TOTAL_DAYS}-day timeline
+            </div>
+          )}
+          {error && <div className="text-[11px] text-yellow-700 mt-1">{error}</div>}
         </div>
       </div>
     </div>
-  ) : null;
+  );
 };
 
 export default SubscriptionRemainDay;

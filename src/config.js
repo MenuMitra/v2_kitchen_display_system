@@ -1,5 +1,5 @@
 // SINGLE SWITCH: change this to 'production' | 'testing' | 'development'
-export const CURRENT_ENV = 'production';
+export const CURRENT_ENV = 'testing';
 
 // Host configuration per environment
 const CONFIG = {

@@ -262,8 +262,8 @@ function Header({
           )}
         </header>
       )}
-      {/* Subscription Component - Only show when outlet is selected and subscription data is available */}
-      {!isFullscreen && selectedOutlet && selectedOutlet.outlet_id && subscriptionData && selectedOutlet.name && (
+      {/* Subscription Component - always show when outlet is selected */}
+      {!isFullscreen && selectedOutlet && selectedOutlet.outlet_id && (
         <SubscriptionRemainDay
           selectedOutlet={selectedOutlet}
           subscriptionData={subscriptionData}
