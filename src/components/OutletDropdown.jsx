@@ -68,11 +68,41 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     setLoading(isLoading);
     if (Array.isArray(outletsData)) {
       setOutlets(outletsData);
-      // Never auto-select an outlet: user must click so OrdersList only calls
-      // cds_kds_order_listview after explicit selection (session kds_fresh_login cleared in handleSelect).
+      const activeOutlets = outletsData.filter((outlet) => !isOutletInactive(outlet));
+
+      // If user has access to exactly one active outlet, auto-select it
+      // and hide the dropdown (CDS-like behavior).
+      if (activeOutlets.length === 1) {
+        const onlyOutlet = activeOutlets[0];
+        const savedOutletId = localStorage.getItem("outlet_id");
+        const hasSameSavedOutlet = String(savedOutletId || "") === String(onlyOutlet.outlet_id);
+
+        localStorage.setItem("outlet_id", onlyOutlet.outlet_id);
+        localStorage.setItem("outlet_name", onlyOutlet.name);
+        sessionStorage.removeItem("kds_fresh_login");
+        setSelected(onlyOutlet);
+        setHideDropdown(true);
+
+        // Avoid unnecessary parent notifications when outlet is already synced.
+        if (!hasSameSavedOutlet && typeof onSelect === "function") {
+          onSelect(onlyOutlet);
+        }
+
+        try {
+          queryClient.invalidateQueries({ queryKey: ["orders"], exact: false });
+          queryClient.refetchQueries({
+            queryKey: ["orders", Number(onlyOutlet.outlet_id)],
+            exact: false,
+          });
+        } catch (e) {
+          // no-op
+        }
+        return;
+      }
+
       setHideDropdown(false);
     }
-  }, [isLoading, outletsData]);
+  }, [isLoading, onSelect, outletsData]);
 
   // Filter outlets by search term
   const filteredOutlets = outlets.filter((outlet) =>
@@ -81,7 +111,6 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
 
   // Handle outlet selection
   const handleSelect = (outlet) => {
-    console.log("handleSelect", outlet);
     // Block selection for inactive outlets
     if (isOutletInactive(outlet)) {
       return;
