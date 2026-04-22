@@ -30,6 +30,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [hideDropdown, setHideDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const autoSelectedOutletIdRef = useRef(null);
 
   // Sync local selected state with selectedOutlet prop
   useEffect(() => {
@@ -68,9 +69,19 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     setLoading(isLoading);
     if (Array.isArray(outletsData)) {
       setOutlets(outletsData);
-      // Never auto-select an outlet: user must click so OrdersList only calls
-      // cds_kds_order_listview after explicit selection (session kds_fresh_login cleared in handleSelect).
-      setHideDropdown(false);
+      const activeOutlets = outletsData.filter((outlet) => !isOutletInactive(outlet));
+      if (activeOutlets.length === 1) {
+        const onlyOutlet = activeOutlets[0];
+        setHideDropdown(true);
+        setSelected(onlyOutlet);
+        if (autoSelectedOutletIdRef.current !== onlyOutlet.outlet_id) {
+          autoSelectedOutletIdRef.current = onlyOutlet.outlet_id;
+          handleSelect(onlyOutlet);
+        }
+      } else {
+        autoSelectedOutletIdRef.current = null;
+        setHideDropdown(false);
+      }
     }
   }, [isLoading, outletsData]);
 
