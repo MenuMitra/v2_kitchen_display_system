@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { useQuery } from "@tanstack/react-query";
 import { V2_COMMON_BASE, COMMON_API_BASE } from "../config";
+import { buildAuthHeaders, getDeviceSessionFields } from "../utils/apiClient";
 
 const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const navigate = useNavigate();
@@ -196,11 +197,13 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     queryFn: async () => {
       const response = await fetch(`${V2_COMMON_BASE}/cds_kds_order_listview`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ outlet_id: numericOutletId, date_filter: filter }),
+        headers: buildAuthHeaders(),
+        body: JSON.stringify({
+          outlet_id: numericOutletId,
+          date_filter: filter,
+          app_source: "kds_app",
+          ...getDeviceSessionFields(),
+        }),
       });
       if (response.status === 401) {
         navigate("/login");
@@ -350,15 +353,13 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         outlet_id: currentOutletId,
         user_id: userId,
         device_token: deviceId,
+        device_id: deviceId,
         app_source: "kds_app",
       };
 
       const response = await fetch(`${V2_COMMON_BASE}/update_order_status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: buildAuthHeaders(),
         body: JSON.stringify(data),
       });
 
@@ -652,11 +653,8 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
         const response = await fetch(`${V2_COMMON_BASE}/update_order_status`, {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(data),
+          headers: buildAuthHeaders(),
+          body: JSON.stringify({ ...getDeviceSessionFields(), ...data }),
         });
 
         if (!response.ok) {
@@ -755,11 +753,8 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
         const response = await fetch(`${V2_COMMON_BASE}/update_order_status`, {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(data),
+          headers: buildAuthHeaders(),
+          body: JSON.stringify({ ...getDeviceSessionFields(), ...data }),
         });
 
         if (!response.ok) {
@@ -897,16 +892,14 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       try {
         const response = await fetch(`${V2_COMMON_BASE}/update_order_status`, {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: buildAuthHeaders(),
           body: JSON.stringify({
             outlet_id: currentOutletId,
             order_id: String(orderId),
             order_status: "cancelled",
             user_id: userId,
             device_token: deviceId,
+            device_id: deviceId,
             app_source: "kds_app",
           }),
         });

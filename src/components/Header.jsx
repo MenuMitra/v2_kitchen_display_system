@@ -5,6 +5,8 @@ import OutletDropdown from "./OutletDropdown";
 import SubscriptionRemainDay from "./SubscriptionRemainDay";
 import { ENV } from "../config/env";
 import { V2_COMMON_BASE } from "../config";
+import { buildAuthHeaders, getLogoutBody } from "../utils/apiClient";
+import { clearAuthSession } from "../utils/authStorage";
 
 
 function Header({
@@ -57,38 +59,20 @@ function Header({
 
   const handleLogout = async () => {
     try {
-      const accessToken = localStorage.getItem("access_token");
-      const userRole = localStorage.getItem("user_role") || "chef";
-      const logoutData = {
-        user_id: userId,
-        // Backend validates that request role matches token role.
-        role: userRole,
-        app: "kds",
-        device_token: localStorage.getItem("fcm_token") || "some-device-token",
-        app_source: "kds_app"
-      };
+      const logoutData = getLogoutBody();
 
       await fetch(`${V2_COMMON_BASE}/logout`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
+        headers: buildAuthHeaders(),
         body: JSON.stringify(logoutData),
       });
 
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      localStorage.removeItem("user_id");
-      localStorage.removeItem("user_role");
-      localStorage.removeItem("device_id");
-      localStorage.removeItem("outlet_id");
-      localStorage.removeItem("outlet_name");
-      sessionStorage.removeItem("kds_fresh_login");
-
+      clearAuthSession();
       navigate("/login");
     } catch (error) {
       console.error("Error logging out:", error);
+      clearAuthSession();
+      navigate("/login");
       window.showToast?.("error", error.message || "Failed to log out.");
     }
   };

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { V2_COMMON_BASE } from "../config";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "./cache";
+import { buildAuthHeaders, getAccessToken, getAdminSessionBody } from "../utils/apiClient";
 
 const toTitleCase = (str) => {
   if (!str || typeof str !== "string") return str || "";
@@ -43,23 +44,22 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     }
   }, [selectedOutlet]);
 
-  // Fetch outlets list via TanStack Query
-  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-  const userId = typeof window !== "undefined" ? localStorage.getItem("user_id") || 0 : 0;
+  const userId = typeof window !== "undefined" ? localStorage.getItem("user_id") || "" : "";
+  const deviceId = typeof window !== "undefined" ? localStorage.getItem("device_id") || "" : "";
 
   const { data: outletsData, isLoading } = useQuery({
-    queryKey: ["outlets", userId],
-    enabled: !!token,
+    queryKey: ["outlets", userId, deviceId],
+    enabled: !!getAccessToken() && !!userId && !!deviceId,
     queryFn: async () => {
       const res = await fetch(`${V2_COMMON_BASE}/get_outlet_list`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ owner_id: userId, app_source: "admin", outlet_id: 0 }),
+        headers: buildAuthHeaders(),
+        body: JSON.stringify(getAdminSessionBody({ outlet_id: 0 })),
       });
       const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json.message || json.detail || `Failed to load outlets (${res.status})`);
+      }
       return Array.isArray(json.outlets) ? json.outlets : [];
     },
   });
