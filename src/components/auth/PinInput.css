@@ -1,0 +1,73 @@
+.pin-input-container {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.pin-input-box {
+  width: 40px;
+  height: 40px;
+  text-align: center;
+  font-size: 1.5rem;
+  border: 2px solid #d1d5db;
+  border-radius: 1.5rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #fff;
+}
+
+.pin-input-box:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+.pin-input-box.filled {
+  border-color: #0d6efd;
+}
+
+.pin-input-box.error {
+  border-color: #ef4444;
+  animation: pin-shake 0.4s ease;
+}
+
+.pin-input-masked {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
+@keyframes pin-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+@media (min-width: 640px) {
+  .pin-input-box {
+    width: 56px;
+    height: 56px;
+    font-size: 1.75rem;
+  }
+}
+
+.pin-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 0.5rem;
+}
+
+.pin-toggle-btn:hover {
+  text-decoration: underline;
+}
+
+.pin-toggle-btn:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}

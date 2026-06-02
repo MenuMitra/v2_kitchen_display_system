@@ -1,95 +1,301 @@
 import axios from "axios";
-import { V2_COMMON_BASE } from "../config";
+import { AUTH_API_BASE, AUTH_APP_TYPE, APP_INFO } from "../config";
+import { getDevicePayload, isRememberDevice } from "../utils/deviceService";
+
+const isLocalAuthServer = AUTH_API_BASE.includes("/api/auth");
+
+function authUrl(path) {
+  return `${AUTH_API_BASE}${path}`;
+}
+
+function verifyPinUrl() {
+  return isLocalAuthServer ? authUrl("/login") : authUrl("/verify_pin");
+}
+
+function verifyPinPayload(mobile, pin) {
+  if (isLocalAuthServer) {
+    return {
+      mobile,
+      pin,
+      app_type: "kds",
+      version: APP_INFO.version,
+      role: ["admin", "chef", "super_owner"],
+      ...getDevicePayload(),
+      remember_device: isRememberDevice(),
+    };
+  }
+
+  return {
+    mobile,
+    pin,
+    app_type: AUTH_APP_TYPE,
+    ...getDevicePayload(),
+  };
+}
+
+function parseError(error) {
+  const data = error.response?.data;
+  const detail =
+    typeof data?.detail === "string"
+      ? data.detail
+      : Array.isArray(data?.detail)
+      ? data.detail.map((d) => d.msg || d).join(", ")
+      : null;
+  return {
+    message: data?.message || detail || "Something went wrong. Please try again.",
+    code: data?.code,
+    attemptsRemaining: data?.attempts_remaining,
+    lockedUntil: data?.locked_until,
+    requiresOtp: data?.requires_otp || data?.requires_pin_setup,
+  };
+}
+
+/** Normalize verify_pin / login responses */
+function normalizeLoginResponse(data) {
+  if (!data || typeof data !== "object") return null;
+
+  if (data.success === false) {
+    return {
+      success: false,
+      message: data.message || "Invalid PIN",
+      code: data.code,
+    };
+  }
+
+  const accessToken = data.access_token || data.token || data.access;
+  if (!accessToken) {
+    return null;
+  }
+
+  const devicePayload = getDevicePayload();
+
+  return {
+    success: true,
+    ...data,
+    ...devicePayload,
+    access_token: accessToken,
+    user_role: data.role,
+    user_id: data.user_id,
+    name: data.name,
+    outlet_id: data.outlet_id,
+    expires_on: data.expires_on,
+    role: data.role,
+  };
+}
 
 export const authService = {
-  // Send OTP
-  sendOTP: async (mobileNumber) => {
+  checkMobile: async (mobile) => {
+    if (!isLocalAuthServer) {
+      return { success: true, exists: true, has_pin: true, locked: false };
+    }
     try {
-      const response = await axios.post(
-        `${V2_COMMON_BASE}/login`,
-        { mobile: mobileNumber, app_type: "chef" },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-      // Return success with role information
-      return {
-        success: true,
-        role: response.data.role,
-        message: response.data.detail,
-        app_type: "chef",
-      };
+      const { data } = await axios.post(authUrl("/check-mobile"), { mobile });
+      return data;
     } catch (error) {
-      console.error("OTP Send Error:", error);
-      let errDetail = error.response?.data?.detail;
-      return {
-        success: false,
-        error:
-          typeof errDetail === "string"
-            ? errDetail
-            : JSON.stringify(errDetail || "Failed to send OTP"),
-      };
+      return { success: false, ...parseError(error) };
     }
   },
 
-   // Verify OTP
-   verifyOTP: async (mobileNumber, otp) => {
-    // Function to generate a random alphanumeric string of specified length
-    const generateRandomSessionId = (length) => {
-      const chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-      let sessionId = "";
-      for (let i = 0; i < length; i++) {
-        sessionId += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return sessionId;
-    };
-
-    const deviceId = generateRandomSessionId(10);
-    const fcmToken = generateRandomSessionId(12);
-
+  loginWithPin: async (mobile, pin) => {
     try {
-      const response = await axios.post(
-        `${V2_COMMON_BASE}/verify_otp`,
-        {
-          mobile: mobileNumber,
-          otp,
-          device_id: deviceId,
-          device_model: "Laptop 122",
-          fcm_token: fcmToken,
-          app_type: "chef",
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const response = await axios.post(verifyPinUrl(), verifyPinPayload(mobile, pin));
 
-      const result = response.data;
+      const normalized = normalizeLoginResponse(response.data);
+      if (normalized?.success) {
+        return normalized;
+      }
+      if (normalized?.success === false) {
+        return normalized;
+      }
 
-      // Store auth data in localStorage
-      localStorage.setItem(
-        "authData",
-        JSON.stringify({
-          name: result.name,
-          user_id: result.user_id,
-          outlet_id: result.outlet_id,
-          access_token: result.access_token,
-          role: result.role,
-          device_id: deviceId,
-          expires_at: result.expires_at,
-        })
-      );
+      const data = response.data;
+      const detail =
+        typeof data?.detail === "string"
+          ? data.detail
+          : Array.isArray(data?.detail)
+          ? data.detail.map((d) => d.msg || d).join(", ")
+          : "";
+
+      return {
+        success: false,
+        message: data?.message || detail || "Invalid PIN. Please try again.",
+      };
+    } catch (error) {
+      return { success: false, ...parseError(error) };
+    }
+  },
+
+  sendSetupOtp: async (mobile) => {
+    try {
+      const endpoint = isLocalAuthServer ? "/otp/send-setup" : "/login";
+      const postUrl = authUrl(endpoint);
+      const { data } = await axios.post(postUrl, {
+        mobile,
+        ...(isLocalAuthServer
+          ? { app_type: "kds", version: APP_INFO.version }
+          : {
+              role: ["admin", "chef", "super_owner"],
+              app_type: "kds",
+              version: APP_INFO.version,
+            }),
+        ...getDevicePayload(),
+      });
+      return {
+        success: true,
+        message: data.message || data.detail || "OTP sent successfully",
+        role: data.role,
+      };
+    } catch (error) {
+      return { success: false, ...parseError(error) };
+    }
+  },
+
+  sendResetOtp: async (mobile) => {
+    try {
+      const endpoint = isLocalAuthServer ? "/otp/send-reset" : "/login";
+      const postUrl = authUrl(endpoint);
+      const { data } = await axios.post(postUrl, {
+        mobile,
+        ...(isLocalAuthServer
+          ? { app_type: "kds", version: APP_INFO.version }
+          : {
+              role: ["admin", "chef", "super_owner"],
+              app_type: "kds",
+              version: APP_INFO.version,
+            }),
+        ...getDevicePayload(),
+      });
+      return {
+        success: true,
+        message: data.message || data.detail || "OTP sent successfully",
+        role: data.role,
+      };
+    } catch (error) {
+      return { success: false, ...parseError(error) };
+    }
+  },
+
+  verifySetupOtp: async (mobile, otp) => {
+    try {
+      const endpoint = isLocalAuthServer ? "/otp/verify-setup" : "/verify_otp";
+      const postUrl = authUrl(endpoint);
+      const { data } = await axios.post(postUrl, {
+        mobile,
+        otp,
+        app_type: "kds",
+        version: APP_INFO.version,
+        ...getDevicePayload(),
+        fcm_token: "dummy_fcm_token",
+      });
+
+      if (data.success === false) {
+        return { success: false, message: data.message || "Invalid OTP" };
+      }
+
+      if (data.setup_token) {
+        return {
+          success: true,
+          setupToken: data.setup_token,
+          user: data.user,
+        };
+      }
+
+      if (data.access_token) {
+        return {
+          success: true,
+          needsPinSetup: true,
+          access_token: data.access_token,
+          ...data,
+          user_role: data.role,
+        };
+      }
+
+      return { success: false, message: "Invalid OTP" };
+    } catch (error) {
+      return { success: false, ...parseError(error) };
+    }
+  },
+
+  verifyResetOtp: async (mobile, otp) => {
+    try {
+      const endpoint = isLocalAuthServer ? "/otp/verify-reset" : "/verify_otp";
+      const postUrl = authUrl(endpoint);
+      const { data } = await axios.post(postUrl, {
+        mobile,
+        otp,
+        app_type: "kds",
+        version: APP_INFO.version,
+        ...getDevicePayload(),
+        fcm_token: "dummy_fcm_token",
+      });
+
+      if (data.success === false) {
+        return { success: false, message: data.message || "Invalid OTP" };
+      }
 
       return {
         success: true,
-        ...result,
+        setupToken: data.setup_token,
+        user: data.user,
       };
     } catch (error) {
-      console.error("OTP Verification Error:", error);
+      return { success: false, ...parseError(error) };
+    }
+  },
+
+  setupPin: async (setupToken, pin, confirmPin) => {
+    try {
+      const { data } = await axios.post(authUrl("/pin/setup"), {
+        setup_token: setupToken,
+        pin,
+        confirm_pin: confirmPin,
+      });
+      return { success: true, ...data };
+    } catch (error) {
+      return { success: false, ...parseError(error) };
+    }
+  },
+
+  resetPin: async (setupToken, pin, confirmPin) => {
+    try {
+      const { data } = await axios.post(authUrl("/pin/reset"), {
+        setup_token: setupToken,
+        pin,
+        confirm_pin: confirmPin,
+        ...getDevicePayload(),
+      });
+
+      const normalized = normalizeLoginResponse(data);
+      if (normalized?.success) {
+        return normalized;
+      }
+
+      return { success: true, ...data };
+    } catch (error) {
+      return { success: false, ...parseError(error) };
+    }
+  },
+
+  refreshToken: async (refreshToken) => {
+    try {
+      const { data } = await axios.post(authUrl("/token/refresh"), {
+        refresh_token: refreshToken,
+      });
       return {
-        success: false,
-        error: error.response?.data?.detail || "Failed to verify OTP",
+        success: true,
+        access_token: data.access || data.access_token,
       };
+    } catch (error) {
+      return { success: false, ...parseError(error) };
+    }
+  },
+
+  logout: async (refreshToken) => {
+    try {
+      await axios.post(authUrl("/logout"), { refresh_token: refreshToken });
+      return { success: true };
+    } catch {
+      return { success: true };
     }
   },
 };

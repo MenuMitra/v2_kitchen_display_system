@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { V2_COMMON_BASE } from "../config";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "./cache";
+import { buildAuthHeaders, getAccessToken, getAdminSessionBody } from "../utils/apiClient";
 
 const toTitleCase = (str) => {
   if (!str || typeof str !== "string") return str || "";
@@ -44,23 +45,22 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     }
   }, [selectedOutlet]);
 
-  // Fetch outlets list via TanStack Query
-  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-  const userId = typeof window !== "undefined" ? localStorage.getItem("user_id") || 0 : 0;
+  const userId = typeof window !== "undefined" ? localStorage.getItem("user_id") || "" : "";
+  const deviceId = typeof window !== "undefined" ? localStorage.getItem("device_id") || "" : "";
 
   const { data: outletsData, isLoading } = useQuery({
-    queryKey: ["outlets", userId],
-    enabled: !!token,
+    queryKey: ["outlets", userId, deviceId],
+    enabled: !!getAccessToken() && !!userId && !!deviceId,
     queryFn: async () => {
       const res = await fetch(`${V2_COMMON_BASE}/get_outlet_list`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ owner_id: userId, app_source: "admin", outlet_id: 0 }),
+        headers: buildAuthHeaders(),
+        body: JSON.stringify(getAdminSessionBody({ outlet_id: 0 })),
       });
       const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json.message || json.detail || `Failed to load outlets (${res.status})`);
+      }
       return Array.isArray(json.outlets) ? json.outlets : [];
     },
   });
@@ -70,20 +70,40 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     if (Array.isArray(outletsData)) {
       setOutlets(outletsData);
       const activeOutlets = outletsData.filter((outlet) => !isOutletInactive(outlet));
+
+      // If user has access to exactly one active outlet, auto-select it
+      // and hide the dropdown (CDS-like behavior).
       if (activeOutlets.length === 1) {
         const onlyOutlet = activeOutlets[0];
-        setHideDropdown(true);
+        const savedOutletId = localStorage.getItem("outlet_id");
+        const hasSameSavedOutlet = String(savedOutletId || "") === String(onlyOutlet.outlet_id);
+
+        localStorage.setItem("outlet_id", onlyOutlet.outlet_id);
+        localStorage.setItem("outlet_name", onlyOutlet.name);
+        sessionStorage.removeItem("kds_fresh_login");
         setSelected(onlyOutlet);
-        if (autoSelectedOutletIdRef.current !== onlyOutlet.outlet_id) {
-          autoSelectedOutletIdRef.current = onlyOutlet.outlet_id;
-          handleSelect(onlyOutlet);
+        setHideDropdown(true);
+
+        // Avoid unnecessary parent notifications when outlet is already synced.
+        if (!hasSameSavedOutlet && typeof onSelect === "function") {
+          onSelect(onlyOutlet);
         }
-      } else {
-        autoSelectedOutletIdRef.current = null;
-        setHideDropdown(false);
+
+        try {
+          queryClient.invalidateQueries({ queryKey: ["orders"], exact: false });
+          queryClient.refetchQueries({
+            queryKey: ["orders", Number(onlyOutlet.outlet_id)],
+            exact: false,
+          });
+        } catch (e) {
+          // no-op
+        }
+        return;
       }
+
+      setHideDropdown(false);
     }
-  }, [isLoading, outletsData]);
+  }, [isLoading, onSelect, outletsData]);
 
   // Filter outlets by search term
   const filteredOutlets = outlets.filter((outlet) =>
@@ -92,7 +112,6 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
 
   // Handle outlet selection
   const handleSelect = (outlet) => {
-    console.log("handleSelect", outlet);
     // Block selection for inactive outlets
     if (isOutletInactive(outlet)) {
       return;

@@ -6,11 +6,19 @@ import "./App.css";
 import "./assets/toast/toast.js";
 import "./assets/toast/toast.css";
 import "remixicon/fonts/remixicon.css";
+import { ENV } from "./config/env";
 
 
 function App() {
+  const isTestingEnv = String(ENV?.env || "").toLowerCase() === "testing";
+
   return (
     <BrowserRouter basename="/">
+      {isTestingEnv && (
+        <div className="env-top-banner" role="status" aria-live="polite">
+          Testing Environment
+        </div>
+      )}
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/orders" element={<OrdersList />} />

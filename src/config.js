@@ -1,5 +1,5 @@
 // SINGLE SWITCH: change this to 'production' | 'testing' | 'development'
-export const CURRENT_ENV = 'production';
+export const CURRENT_ENV = 'testing';
 
 // Host configuration per environment
 const CONFIG = {
@@ -19,9 +19,17 @@ const CONFIG = {
 
 const { API_HOST, WS_URL } = CONFIG[CURRENT_ENV] || CONFIG.development;
 
-// Common base paths used across the app
-export const V2_COMMON_BASE = `${API_HOST}/v2.2/common`;
+// Common base paths used across the app (v2.3)
+export const V2_COMMON_BASE = `${API_HOST}/v2.3/common`;
+export const V2_3_COMMON_BASE = V2_COMMON_BASE;
 export const COMMON_API_BASE = `${API_HOST}/common_api`;
+
+// PIN auth — verify_pin on same v2.3 base (override with REACT_APP_AUTH_API_URL for local server)
+export const AUTH_API_BASE =
+  process.env.REACT_APP_AUTH_API_URL || V2_COMMON_BASE;
+
+/** app_type sent to POST /v2.3/common/verify_pin */
+export const AUTH_APP_TYPE = "admin";
 
 // Base API URL (alias for convenience)
 export const API_URL = V2_COMMON_BASE;

@@ -1,4 +1,16 @@
 /* App styles */
+.env-top-banner {
+  width: 100%;
+  background: #b91c1c;
+  color: #fff;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 4px 8px;
+  letter-spacing: 0.2px;
+}
+
 .App {
   text-align: center;
 }

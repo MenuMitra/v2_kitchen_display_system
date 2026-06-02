@@ -74,9 +74,9 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
 
   const parseDateSafe = (value) => {
     if (!value) return null;
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return null;
-    return d;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
   };
 
   // Hide timeline until outlet is selected
@@ -87,7 +87,6 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
   const currentDate = new Date();
   const startDate = parseDateSafe(subscriptionData?.start_date);
   const endDate = parseDateSafe(subscriptionData?.end_date);
-
   const hasValidTimeline = !!startDate && !!endDate && endDate >= startDate;
 
   const totalDays = hasValidTimeline
