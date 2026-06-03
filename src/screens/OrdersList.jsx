@@ -9,9 +9,10 @@ import React, {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { V2_COMMON_BASE, COMMON_API_BASE } from "../config";
 import { buildAuthHeaders, getDeviceSessionFields } from "../utils/apiClient";
+import { logoutAndRedirect } from "../utils/authStorage";
 
 const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const navigate = useNavigate();
@@ -194,6 +195,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     queryKey: ["orders", isValidOutletId ? numericOutletId : null],
     enabled: shouldFetchOrders,
     refetchInterval: false,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const response = await fetch(`${V2_COMMON_BASE}/cds_kds_order_listview`, {
         method: "POST",
@@ -206,14 +208,8 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         }),
       });
       if (response.status === 401) {
-        navigate("/login");
-        return {
-          placed_orders: [],
-          cooking_orders: [],
-          paid_orders: [],
-          served_orders: [],
-          subscription_details: null,
-        };
+        logoutAndRedirect(navigate);
+        throw new Error("Session expired");
       }
       if (!response.ok) {
         // e.g. 400 when KDS is not assigned for this outlet
@@ -343,7 +339,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   // Update order status on server, then update UI immediately
   const sendOrderStatusUpdate = useCallback(async (orderId, nextStatus = "served") => {
     if (!accessToken || !orderId) {
-      navigate("/login");
+      logoutAndRedirect(navigate);
       return;
     }
     try {
@@ -367,7 +363,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         if (response.status === 401) {
           const ok = await refreshToken();
           if (ok) return sendOrderStatusUpdate(orderId, nextStatus);
-          navigate("/login");
+          logoutAndRedirect(navigate);
           return;
         }
         const errorText = await response.text();
@@ -409,7 +405,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
   // Mirror query data into local UI state
   useEffect(() => {
-    if (queryLoading) {
+    if (queryLoading && ordersResponse === undefined) {
       setInitialLoading(true);
       return;
     }
@@ -613,7 +609,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         menu?.order_menu_mapping_id ?? menu?.menu_id ?? null;
 
       if (!accessToken || !orderId || !menu || !menuIdentifier) {
-        navigate("/login");
+        logoutAndRedirect(navigate);
         return;
       }
 
@@ -664,7 +660,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
               servingMenuItemsRef.current.delete(menuKey);
               return handleServeMenuItem(orderId, menu);
             }
-            navigate("/login");
+            logoutAndRedirect(navigate);
             return;
           }
           const errorText = await response.text();
@@ -701,7 +697,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       // Combo items from API use `combo_master_id` (not `combo_id`), so we must NOT
       // treat missing `combo_id` as an auth failure that forces logout.
       if (!accessToken || !orderId || !combo) {
-        navigate("/login");
+        logoutAndRedirect(navigate);
         return;
       }
 
@@ -764,7 +760,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
               servingMenuItemsRef.current.delete(comboKey);
               return handleServeComboItem(orderId, combo);
             }
-            navigate("/login");
+            logoutAndRedirect(navigate);
             return;
           }
           const errorText = await response.text();
@@ -813,7 +809,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   useEffect(() => {
     // Only redirect if authentication essentials are missing; allow staying without outlet
     if (!accessToken || !userId || !deviceId) {
-      navigate("/login");
+      logoutAndRedirect(navigate);
       return;
     }
   }, [accessToken, userId, deviceId, navigate]);
@@ -886,7 +882,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       if (userRole === "super_owner") return;
       const token = localStorage.getItem("access_token");
       if (!token) {
-        navigate("/login");
+        logoutAndRedirect(navigate);
         return;
       }
       try {
@@ -905,7 +901,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         });
 
         if (response.status === 401) {
-          navigate("/login");
+          logoutAndRedirect(navigate);
           return;
         }
       } catch (error) {

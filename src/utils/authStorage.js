@@ -60,3 +60,11 @@ export function getAccessToken() {
 export function getRefreshToken() {
   return localStorage.getItem("refresh_token");
 }
+
+/** Clear session and send user to login (prevents login ↔ orders redirect loop on 401). */
+export function logoutAndRedirect(navigate) {
+  clearAuthSession();
+  if (typeof navigate === "function") {
+    navigate("/login", { replace: true });
+  }
+}
