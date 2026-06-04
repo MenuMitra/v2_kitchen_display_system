@@ -1,6 +1,12 @@
 import axios from "axios";
 import { AUTH_API_BASE, AUTH_APP_TYPE, APP_INFO } from "../config";
 import { getDevicePayload, isRememberDevice } from "../utils/deviceService";
+import {
+  getApiErrorMessage,
+  isMobileNotFoundMessage,
+  isPinRequiredMessage,
+  MOBILE_NOT_FOUND_MESSAGE,
+} from "../utils/apiErrors";
 
 const isLocalAuthServer = AUTH_API_BASE.includes("/api/auth");
 
@@ -33,16 +39,162 @@ function verifyPinPayload(mobile, pin) {
   };
 }
 
+function checkMobilePayload(mobile) {
+  return {
+    mobile,
+    app_type: isLocalAuthServer ? "kds" : AUTH_APP_TYPE,
+    ...(isLocalAuthServer
+      ? { version: APP_INFO.version }
+      : {
+          role: ["admin", "chef", "super_owner"],
+          version: APP_INFO.version,
+        }),
+    ...getDevicePayload(),
+  };
+}
+
+function extractCheckMobileUser(data) {
+  if (!data || typeof data !== "object") return null;
+  const userId = data.user_id ?? data.user?.id;
+  if (!userId && !data.mobile && !data.name && !data.user?.name) return null;
+  return {
+    user_id: userId,
+    mobile: data.mobile ?? data.user?.mobile,
+    name: data.name ?? data.user?.name,
+    role: data.role ?? data.user?.role,
+  };
+}
+
+function responseText(data) {
+  const message = typeof data?.message === "string" ? data.message : "";
+  const detail = typeof data?.detail === "string" ? data.detail : "";
+  return message || detail;
+}
+
+/** Normalize check-mobile / pre-login validation responses */
+function normalizeCheckMobileResponse(data, httpStatus) {
+  const combined = responseText(data);
+
+  if (
+    httpStatus === 404 ||
+    isMobileNotFoundMessage(combined) ||
+    isMobileNotFoundMessage(data?.detail)
+  ) {
+    return {
+      success: true,
+      exists: false,
+      has_pin: false,
+      locked: false,
+      message: MOBILE_NOT_FOUND_MESSAGE,
+    };
+  }
+
+  if (data?.locked || data?.code === "ACCOUNT_LOCKED" || httpStatus === 423) {
+    return {
+      success: true,
+      exists: true,
+      has_pin: !!data?.has_pin,
+      locked: true,
+      locked_until: data?.locked_until,
+      message: combined,
+      user: extractCheckMobileUser(data),
+    };
+  }
+
+  if (data?.exists === false) {
+    return {
+      success: true,
+      exists: false,
+      has_pin: false,
+      locked: false,
+      message: MOBILE_NOT_FOUND_MESSAGE,
+    };
+  }
+
+  if (isPinRequiredMessage(combined)) {
+    return {
+      success: true,
+      exists: true,
+      has_pin: true,
+      locked: false,
+      user: extractCheckMobileUser(data),
+    };
+  }
+
+  if (
+    data?.requires_pin_setup ||
+    data?.requires_otp ||
+    data?.code === "PIN_NOT_SET" ||
+    /otp.*sent/i.test(combined)
+  ) {
+    return {
+      success: true,
+      exists: true,
+      has_pin: false,
+      locked: false,
+      user: extractCheckMobileUser(data),
+    };
+  }
+
+  if (data?.success === false) {
+    return {
+      success: false,
+      message: combined || "Something went wrong. Please try again.",
+    };
+  }
+
+  const user = extractCheckMobileUser(data);
+  if (
+    user?.user_id ||
+    data?.status === true ||
+    data?.success === true ||
+    data?.exists === true
+  ) {
+    return {
+      success: true,
+      exists: true,
+      has_pin: data?.has_pin !== false,
+      locked: data?.locked || false,
+      locked_until: data?.locked_until,
+      role: data?.role,
+      user,
+    };
+  }
+
+  if (httpStatus >= 200 && httpStatus < 300) {
+    return {
+      success: true,
+      exists: true,
+      has_pin: data?.has_pin !== false,
+      locked: false,
+      user,
+    };
+  }
+
+  return {
+    success: false,
+    message: combined || "Something went wrong. Please try again.",
+  };
+}
+
+function normalizeCheckMobileError(error) {
+  if (!error.response) {
+    return {
+      success: false,
+      message: getApiErrorMessage(
+        error,
+        "Unable to reach server. Please check your connection and try again."
+      ),
+    };
+  }
+
+  return normalizeCheckMobileResponse(error.response.data, error.response.status);
+}
+
 function parseError(error) {
   const data = error.response?.data;
-  const detail =
-    typeof data?.detail === "string"
-      ? data.detail
-      : Array.isArray(data?.detail)
-      ? data.detail.map((d) => d.msg || d).join(", ")
-      : null;
   return {
-    message: data?.message || detail || "Something went wrong. Please try again.",
+    message: getApiErrorMessage(error),
     code: data?.code,
     attemptsRemaining: data?.attempts_remaining,
     lockedUntil: data?.locked_until,
@@ -85,14 +237,12 @@ function normalizeLoginResponse(data) {
 
 export const authService = {
   checkMobile: async (mobile) => {
-    if (!isLocalAuthServer) {
-      return { success: true, exists: true, has_pin: true, locked: false };
-    }
+    const endpoint = isLocalAuthServer ? "/check-mobile" : "/login";
     try {
-      const { data } = await axios.post(authUrl("/check-mobile"), { mobile });
-      return data;
+      const response = await axios.post(authUrl(endpoint), checkMobilePayload(mobile));
+      return normalizeCheckMobileResponse(response.data, response.status);
     } catch (error) {
-      return { success: false, ...parseError(error) };
+      return normalizeCheckMobileError(error);
     }
   },
 

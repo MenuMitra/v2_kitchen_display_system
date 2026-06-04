@@ -5,6 +5,7 @@ import { APP_INFO } from "../config";
 import { authService } from "../services/authService";
 import { saveAuthSession, isAuthenticated } from "../utils/authStorage";
 import { getDevicePayload } from "../utils/deviceService";
+import { MOBILE_NOT_FOUND_MESSAGE } from "../utils/apiErrors";
 import PinInput from "../components/auth/PinInput";
 
 const STEPS = {
@@ -31,8 +32,10 @@ function Login() {
   const [otpPurpose, setOtpPurpose] = useState(OTP_PURPOSE.SETUP);
   const [setupToken, setSetupToken] = useState("");
   const [pinSetupPhase, setPinSetupPhase] = useState("create");
+  const [validatedUser, setValidatedUser] = useState(null);
 
   const navigate = useNavigate();
+  const mobileInputRef = useRef(null);
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
   useEffect(() => {
@@ -46,6 +49,14 @@ function Login() {
     const timer = setInterval(() => setResendCooldown((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [resendCooldown]);
+
+  const showMobileError = (message) => {
+    setError(message);
+    setPin("");
+    setValidatedUser(null);
+    window.showToast?.("error", message);
+    requestAnimationFrame(() => mobileInputRef.current?.focus());
+  };
 
   const handleMobileChange = (e) => {
     const input = e.target.value.replace(/\D/g, "").slice(0, 10);
@@ -70,8 +81,18 @@ function Login() {
     e?.preventDefault();
     setError("");
 
-    if (!mobileNumber || mobileNumber.length !== 10) {
-      setError("Please enter a valid 10-digit mobile number");
+    if (!mobileNumber) {
+      showMobileError("Please enter your mobile number");
+      return;
+    }
+
+    if (mobileNumber.length !== 10) {
+      showMobileError("Please enter a valid 10-digit mobile number");
+      return;
+    }
+
+    if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
+      showMobileError("Mobile number must start with 6-9");
       return;
     }
 
@@ -79,8 +100,18 @@ function Login() {
     try {
       const status = await authService.checkMobile(mobileNumber);
 
+      if (status.success === false) {
+        showMobileError(status.message || "Something went wrong. Please try again.");
+        return;
+      }
+
+      if (status.exists === false) {
+        showMobileError(status.message || MOBILE_NOT_FOUND_MESSAGE);
+        return;
+      }
+
       if (status.locked) {
-        setError(
+        showMobileError(
           status.locked_until
             ? `Account locked. Try again after ${new Date(status.locked_until).toLocaleTimeString()}`
             : "Account temporarily locked. Please try again later."
@@ -88,9 +119,8 @@ function Login() {
         return;
       }
 
-      if (status.exists === false) {
-        setError("User not found with this mobile number");
-        return;
+      if (status.user) {
+        setValidatedUser(status.user);
       }
 
       if (!status.has_pin) {
@@ -99,8 +129,9 @@ function Login() {
         if (otpResult.success) {
           setStep(STEPS.OTP_VERIFY);
           setResendCooldown(30);
+          setError("");
         } else {
-          setError(otpResult.message);
+          showMobileError(otpResult.message || MOBILE_NOT_FOUND_MESSAGE);
         }
         return;
       }
@@ -303,6 +334,7 @@ function Login() {
     setPin("");
     setConfirmPin("");
     setSetupToken("");
+    setValidatedUser(null);
     setError("");
   };
 
@@ -361,7 +393,7 @@ function Login() {
 
           <div className="w-full mt-1">
             <form id="formAuthentication" className="mb-1 w-full p-1" onSubmit={handleFormSubmit} noValidate>
-              {error && (
+              {error && step !== STEPS.MOBILE && (
                 <div className="flex justify-center px-2 mb-4">
                   <div
                     role="alert"
@@ -378,8 +410,13 @@ function Login() {
                     Mobile Number <span className="text-red-500">*</span>
                   </label>
                   <input
+                    ref={mobileInputRef}
                     type="text"
-                    className="w-full h-[55px] px-4 py-3 text-xl border border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400"
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    className={`w-full h-[55px] px-4 py-3 text-xl border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400 ${
+                      error ? "border-red-500" : "border-gray-800"
+                    }`}
                     id="mobile"
                     name="mobile"
                     placeholder="Enter your mobile number"
@@ -387,7 +424,18 @@ function Login() {
                     onChange={handleMobileChange}
                     autoFocus
                     disabled={loading}
+                    aria-invalid={!!error}
+                    aria-describedby={error ? "mobile-error" : undefined}
                   />
+                  {error && (
+                    <p
+                      id="mobile-error"
+                      role="alert"
+                      className="mt-2 text-sm text-red-600 text-left"
+                    >
+                      {error}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -395,6 +443,7 @@ function Login() {
                 <>
                   <div className="text-center mt-2 mb-3 text-gray-700">
                     Enter your 4-digit PIN for {mobileNumber}
+                    {validatedUser?.name ? ` (${validatedUser.name})` : ""}
                   </div>
                   <div className="mb-4 px-0 sm:px-4">
                     <PinInput
