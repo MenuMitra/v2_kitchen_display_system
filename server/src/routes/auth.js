@@ -32,6 +32,27 @@ router.post("/login", authLimiter, validateMobile, async (req, res, next) => {
   }
 });
 
+router.post("/verify_pin", authLimiter, validateMobile, async (req, res, next) => {
+  try {
+    const { pin } = req.body;
+    if (!pin) {
+      return res.status(400).json({ success: false, message: "PIN is required" });
+    }
+    const result = await authService.verifyPin(req.body);
+    res.json(result);
+  } catch (err) {
+    if (err instanceof PinNotSetError) {
+      return res.status(403).json({
+        success: false,
+        message: err.message,
+        code: "PIN_NOT_SET",
+        requires_otp: true,
+      });
+    }
+    next(err);
+  }
+});
+
 router.post("/otp/send-setup", otpLimiter, validateMobile, async (req, res, next) => {
   try {
     const result = await authService.sendSetupOtp(req.body.mobile);
