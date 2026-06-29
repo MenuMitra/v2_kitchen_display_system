@@ -1023,8 +1023,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
               <div className={`${bgOpacityClass} py-2 md:py-2 px-3`}>
                 <div className="flex justify-between items-center flex-wrap gap-1 md:gap-0">
                   <p className="text-xl md:text-2xl font-bold mb-0 flex items-center">
-                    <i className="bx bx-hash mr-1"></i>{order.order_number}
-
+                    {order.order_number}
                   </p>
                   <p className="mb-0 text-base md:text-xl capitalize font-semibold">
                     {order.section_name
