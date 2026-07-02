@@ -396,10 +396,10 @@ function Login() {
 
               {step === STEPS.PIN_ENTRY && (
                 <>
-                  <div className="text-center mt-2 mb-3 text-gray-700">
+                  <div className="text-center mt-2 text-gray-700">
                     Enter your 4-digit PIN for {mobileNumber}
                   </div>
-                  <div className="flex justify-end w-full px-2 sm:px-8 -mt-1 mb-2">
+                  <div className="flex justify-center w-full px-2 sm:px-8 mt-1 mb-3">
                     <button
                       type="button"
                       onClick={() => setShowPin((prev) => !prev)}
