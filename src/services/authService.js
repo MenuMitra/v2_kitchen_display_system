@@ -4,6 +4,7 @@ import { getDevicePayload, isRememberDevice } from "../utils/deviceService";
 import {
   getApiErrorMessage,
   isMobileNotFoundMessage,
+  isNoActiveSessionMessage,
   isPinRequiredMessage,
   MOBILE_NOT_FOUND_MESSAGE,
 } from "../utils/apiErrors";
@@ -18,38 +19,38 @@ function verifyPinUrl() {
   return isLocalAuthServer ? authUrl("/login") : authUrl("/verify_pin");
 }
 
-function verifyPinPayload(mobile, pin) {
+function baseAuthPayload(mobile, appType = AUTH_APP_TYPE) {
   if (isLocalAuthServer) {
     return {
       mobile,
-      pin,
       app_type: "kds",
       version: APP_INFO.version,
       role: ["admin", "chef", "super_owner"],
       ...getDevicePayload(),
-      remember_device: isRememberDevice(),
     };
   }
 
   return {
     mobile,
-    pin,
-    app_type: AUTH_APP_TYPE,
+    app_type: appType,
+    role: ["admin", "chef", "super_owner"],
+    version: APP_INFO.version,
     ...getDevicePayload(),
   };
 }
 
-function checkMobilePayload(mobile) {
+function verifyPinPayload(mobile, pin) {
+  if (isLocalAuthServer) {
+    return {
+      ...baseAuthPayload(mobile, "kds"),
+      pin,
+      remember_device: isRememberDevice(),
+    };
+  }
+
   return {
-    mobile,
-    app_type: isLocalAuthServer ? "kds" : AUTH_APP_TYPE,
-    ...(isLocalAuthServer
-      ? { version: APP_INFO.version }
-      : {
-          role: ["admin", "chef", "super_owner"],
-          version: APP_INFO.version,
-        }),
-    ...getDevicePayload(),
+    ...baseAuthPayload(mobile, AUTH_APP_TYPE),
+    pin,
   };
 }
 
@@ -71,7 +72,6 @@ function responseText(data) {
   return message || detail;
 }
 
-/** Normalize check-mobile / pre-login validation responses */
 function normalizeCheckMobileResponse(data, httpStatus) {
   const combined = responseText(data);
 
@@ -148,7 +148,8 @@ function normalizeCheckMobileResponse(data, httpStatus) {
     user?.user_id ||
     data?.status === true ||
     data?.success === true ||
-    data?.exists === true
+    data?.exists === true ||
+    data?.role
   ) {
     return {
       success: true,
@@ -199,6 +200,7 @@ function parseError(error) {
     attemptsRemaining: data?.attempts_remaining,
     lockedUntil: data?.locked_until,
     requiresOtp: data?.requires_otp || data?.requires_pin_setup,
+    needsLoginSession: isNoActiveSessionMessage(data?.message),
   };
 }
 
@@ -235,11 +237,70 @@ function normalizeLoginResponse(data) {
   };
 }
 
+/**
+ * menusmitra.xyz (testing) requires POST /login before POST /verify_pin.
+ * Creates a pending session keyed by (mobile, device_id, app_type).
+ * Safe to call on production — /login is a no-op when session already exists.
+ */
+async function establishLoginSession(mobile, appType = AUTH_APP_TYPE) {
+  if (isLocalAuthServer) {
+    return { success: true };
+  }
+
+  try {
+    const { data, status } = await axios.post(
+      authUrl("/login"),
+      baseAuthPayload(mobile, appType)
+    );
+
+    if (status >= 200 && status < 300 && data?.success !== false) {
+      return { success: true, role: data.role, user: extractCheckMobileUser(data) };
+    }
+
+    const combined = responseText(data);
+    if (isMobileNotFoundMessage(combined)) {
+      return { success: false, message: MOBILE_NOT_FOUND_MESSAGE };
+    }
+
+    return {
+      success: false,
+      message: combined || "Unable to start login session. Please try again.",
+    };
+  } catch (error) {
+    if (!error.response) {
+      return {
+        success: false,
+        message: getApiErrorMessage(
+          error,
+          "Unable to reach server. Please check your connection and try again."
+        ),
+      };
+    }
+
+    const { data, status } = error.response;
+    const combined = responseText(data);
+
+    if (isMobileNotFoundMessage(combined) || status === 404) {
+      return { success: false, message: MOBILE_NOT_FOUND_MESSAGE };
+    }
+
+    return {
+      success: false,
+      message: combined || getApiErrorMessage(error),
+    };
+  }
+}
+
 export const authService = {
+  establishLoginSession,
+
   checkMobile: async (mobile) => {
     const endpoint = isLocalAuthServer ? "/check-mobile" : "/login";
     try {
-      const response = await axios.post(authUrl(endpoint), checkMobilePayload(mobile));
+      const response = await axios.post(
+        authUrl(endpoint),
+        baseAuthPayload(mobile)
+      );
       return normalizeCheckMobileResponse(response.data, response.status);
     } catch (error) {
       return normalizeCheckMobileError(error);
@@ -248,6 +309,11 @@ export const authService = {
 
   loginWithPin: async (mobile, pin) => {
     try {
+      const sessionResult = await establishLoginSession(mobile);
+      if (!sessionResult.success) {
+        return sessionResult;
+      }
+
       const response = await axios.post(verifyPinUrl(), verifyPinPayload(mobile, pin));
 
       const normalized = normalizeLoginResponse(response.data);
@@ -259,19 +325,39 @@ export const authService = {
       }
 
       const data = response.data;
-      const detail =
-        typeof data?.detail === "string"
-          ? data.detail
-          : Array.isArray(data?.detail)
-          ? data.detail.map((d) => d.msg || d).join(", ")
-          : "";
+      const combined = responseText(data);
 
       return {
         success: false,
-        message: data?.message || detail || "Invalid PIN. Please try again.",
+        message: combined || "Invalid PIN. Please try again.",
       };
     } catch (error) {
-      return { success: false, ...parseError(error) };
+      const parsed = parseError(error);
+
+      if (parsed.needsLoginSession) {
+        const retrySession = await establishLoginSession(mobile);
+        if (!retrySession.success) {
+          return retrySession;
+        }
+
+        try {
+          const retryResponse = await axios.post(
+            verifyPinUrl(),
+            verifyPinPayload(mobile, pin)
+          );
+          const retryNormalized = normalizeLoginResponse(retryResponse.data);
+          if (retryNormalized?.success) {
+            return retryNormalized;
+          }
+          if (retryNormalized?.success === false) {
+            return retryNormalized;
+          }
+        } catch (retryError) {
+          return { success: false, ...parseError(retryError) };
+        }
+      }
+
+      return { success: false, ...parsed };
     }
   },
 
@@ -279,17 +365,7 @@ export const authService = {
     try {
       const endpoint = isLocalAuthServer ? "/otp/send-setup" : "/login";
       const postUrl = authUrl(endpoint);
-      const { data } = await axios.post(postUrl, {
-        mobile,
-        ...(isLocalAuthServer
-          ? { app_type: "kds", version: APP_INFO.version }
-          : {
-              role: ["admin", "chef", "super_owner"],
-              app_type: "kds",
-              version: APP_INFO.version,
-            }),
-        ...getDevicePayload(),
-      });
+      const { data } = await axios.post(postUrl, baseAuthPayload(mobile, "kds"));
       return {
         success: true,
         message: data.message || data.detail || "OTP sent successfully",
@@ -304,17 +380,7 @@ export const authService = {
     try {
       const endpoint = isLocalAuthServer ? "/otp/send-reset" : "/login";
       const postUrl = authUrl(endpoint);
-      const { data } = await axios.post(postUrl, {
-        mobile,
-        ...(isLocalAuthServer
-          ? { app_type: "kds", version: APP_INFO.version }
-          : {
-              role: ["admin", "chef", "super_owner"],
-              app_type: "kds",
-              version: APP_INFO.version,
-            }),
-        ...getDevicePayload(),
-      });
+      const { data } = await axios.post(postUrl, baseAuthPayload(mobile, "kds"));
       return {
         success: true,
         message: data.message || data.detail || "OTP sent successfully",

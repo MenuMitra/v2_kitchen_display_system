@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
-import { ENV } from '../config/env';
 import { V2_COMMON_BASE } from '../config';
 import { useNavigate } from 'react-router-dom';
+import { buildAuthHeaders, getDeviceSessionFields } from '../utils/apiClient';
+import { getAccessToken, logoutAndRedirect } from '../utils/authStorage';
 
 const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: propSubscriptionData }) => {
   const [subscriptionData, setSubscriptionData] = useState(propSubscriptionData || null);
@@ -12,42 +13,29 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
   const navigate = useNavigate();
   const DEFAULT_TOTAL_DAYS = 30;
 
-  const authData = localStorage.getItem("authData");
-  let token = null;
-  if (authData) {
-    try {
-      token = JSON.parse(authData).access_token;
-    } catch (err) {
-      console.error("Failed to parse authData", err);
-    }
-  }
-
   const fetchSubscriptionData = async ({ queryKey }) => {
     const [, outletId, currentDateRange] = queryKey;
+    const token = getAccessToken();
     if (!outletId || !token) return null;
     try {
       const requestPayload = {
         outlet_id: outletId,
         date_filter: currentDateRange || 'today',
-        owner_id: 1,
-        app_source: 'admin',
+        app_source: 'kds_app',
+        ...getDeviceSessionFields(),
       };
       const response = await axios.post(
         `${V2_COMMON_BASE}/cds_kds_order_listview`,
         requestPayload,
         {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
+          headers: buildAuthHeaders(),
         }
       );
       const data = response.data;
       return data && data.subscription_details ? data.subscription_details : null;
     } catch (err) {
       if (err.response?.status === 401) {
-        localStorage.clear();
-        navigate('/login');
+        logoutAndRedirect(navigate);
         return null;
       }
       throw err;

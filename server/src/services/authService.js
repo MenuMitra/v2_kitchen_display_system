@@ -5,7 +5,8 @@ const tokenService = require("./tokenService");
 const { AppError, PinNotSetError, AccountLockedError } = require("../utils/errors");
 const logger = require("../utils/logger");
 
-const ALLOWED_ROLES = ["admin", "chef", "super_owner", "owner"];
+const ALLOWED_ROLES = ["admin", "chef", "super_owner", "owner", "customer"];
+const SESSION_TTL_MINUTES = 15;
 
 async function findUserByMobile(mobile) {
   const { rows } = await pool.query(
@@ -32,14 +33,136 @@ async function checkMobileStatus(mobile) {
   };
 }
 
-async function login({ mobile, pin, device_id, device_model, app_type, version, remember_device }) {
-  if (!mobile || !/^[6-9]\d{9}$/.test(mobile)) {
-    throw new AppError("Invalid mobile number", 400, "INVALID_MOBILE");
+async function createPendingSession(user, { device_id, device_model, app_type }) {
+  const expiresAt = new Date(Date.now() + SESSION_TTL_MINUTES * 60 * 1000);
+  await pool.query(
+    `INSERT INTO login_sessions (user_id, mobile, device_id, device_model, app_type, status, expires_at)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6)
+     ON CONFLICT (mobile, device_id, app_type)
+     DO UPDATE SET
+       user_id = EXCLUDED.user_id,
+       device_model = EXCLUDED.device_model,
+       status = 'pending',
+       expires_at = EXCLUDED.expires_at,
+       created_at = NOW()`,
+    [user.id, user.mobile, device_id, device_model || null, app_type || "kds", expiresAt]
+  );
+}
+
+async function findPendingSession(mobile, device_id, app_type) {
+  const { rows } = await pool.query(
+    `SELECT ls.*, u.id AS uid, u.mobile, u.name, u.role, u.pin_hash, u.failed_attempts, u.locked_until
+     FROM login_sessions ls
+     JOIN users u ON u.id = ls.user_id
+     WHERE ls.mobile = $1
+       AND ls.device_id = $2
+       AND ls.app_type = $3
+       AND ls.status = 'pending'
+       AND ls.expires_at > NOW()`,
+    [mobile, device_id, app_type || "kds"]
+  );
+  return rows[0] || null;
+}
+
+async function activateSession(sessionId) {
+  await pool.query(
+    `UPDATE login_sessions SET status = 'active' WHERE id = $1`,
+    [sessionId]
+  );
+}
+
+/** Step 1: mobile-only — validates user exists and creates pending session */
+async function startLogin({ mobile, device_id, device_model, app_type }) {
+  if (!device_id) {
+    throw new AppError("device_id is required", 400, "DEVICE_REQUIRED");
   }
 
   const user = await findUserByMobile(mobile);
   if (!user) {
-    throw new AppError("User not found", 404, "USER_NOT_FOUND");
+    throw new AppError("User with this mobile number does not exist", 404, "USER_NOT_FOUND");
+  }
+
+  if (await pinService.isAccountLocked(user)) {
+    throw new AccountLockedError(user.locked_until);
+  }
+
+  await createPendingSession(user, { device_id, device_model, app_type });
+
+  return {
+    success: true,
+    role: user.role,
+    user_id: user.id,
+    has_pin: !!user.pin_hash,
+  };
+}
+
+async function completeLogin(user, { device_id, device_model, app_type, remember_device }) {
+  const accessToken = tokenService.signAccessToken(user);
+  const refreshToken = tokenService.signRefreshToken(user);
+  await tokenService.storeRefreshToken(user.id, refreshToken, device_id, device_model);
+
+  if (remember_device && device_id) {
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await pool.query(
+      `INSERT INTO trusted_devices (user_id, device_id, device_model, expires_at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id, device_id)
+       DO UPDATE SET last_used_at = NOW(), expires_at = $4, device_model = $3`,
+      [user.id, device_id, device_model, expiresAt]
+    );
+  }
+
+  logger.info("User logged in", {
+    userId: user.id,
+    mobile: user.mobile.slice(-4).padStart(10, "*"),
+    app_type,
+  });
+
+  return {
+    success: true,
+    message: "Login successful",
+    token: accessToken,
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    role: user.role,
+    user_role: user.role,
+    user_id: user.id,
+    name: user.name,
+    user: { id: user.id, name: user.name, mobile: user.mobile },
+  };
+}
+
+/** Step 2: verify PIN — session optional; creates session on success if missing */
+async function verifyPin({
+  mobile,
+  pin,
+  device_id,
+  device_model,
+  app_type,
+  remember_device,
+}) {
+  if (!device_id) {
+    throw new AppError("device_id is required", 400, "DEVICE_REQUIRED");
+  }
+
+  let user;
+  let session = await findPendingSession(mobile, device_id, app_type);
+
+  if (session) {
+    user = {
+      id: session.uid,
+      mobile: session.mobile,
+      name: session.name,
+      role: session.role,
+      pin_hash: session.pin_hash,
+      failed_attempts: session.failed_attempts,
+      locked_until: session.locked_until,
+    };
+  } else {
+    user = await findUserByMobile(mobile);
+    if (!user) {
+      throw new AppError("User with this mobile number does not exist", 404, "USER_NOT_FOUND");
+    }
   }
 
   if (!ALLOWED_ROLES.includes(user.role)) {
@@ -65,39 +188,32 @@ async function login({ mobile, pin, device_id, device_model, app_type, version, 
   const valid = await pinService.verifyPin(pin, user.pin_hash);
   if (!valid) {
     await pinService.recordFailedAttempt(user.id);
+    throw new AppError("Invalid PIN", 400, "INVALID_PIN");
   }
 
   await pinService.resetFailedAttempts(user.id);
 
-  const accessToken = tokenService.signAccessToken(user);
-  const refreshToken = tokenService.signRefreshToken(user);
-  await tokenService.storeRefreshToken(user.id, refreshToken, device_id, device_model);
-
-  if (remember_device && device_id) {
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    await pool.query(
-      `INSERT INTO trusted_devices (user_id, device_id, device_model, expires_at)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (user_id, device_id)
-       DO UPDATE SET last_used_at = NOW(), expires_at = $4, device_model = $3`,
-      [user.id, device_id, device_model, expiresAt]
-    );
+  if (session) {
+    await activateSession(session.id);
+  } else {
+    await createPendingSession(user, { device_id, device_model, app_type });
+    session = await findPendingSession(mobile, device_id, app_type);
+    if (session) await activateSession(session.id);
   }
 
-  logger.info("User logged in", { userId: user.id, mobile: mobile.slice(-4).padStart(10, "*"), app_type, version });
+  return completeLogin(user, { device_id, device_model, app_type, remember_device });
+}
 
-  return {
-    success: true,
-    message: "Login successful",
-    token: accessToken,
-    access_token: accessToken,
-    refresh_token: refreshToken,
-    role: user.role,
-    user_role: user.role,
-    user_id: user.id,
-    name: user.name,
-    user: { id: user.id, name: user.name, mobile: user.mobile },
-  };
+async function login({ mobile, pin, device_id, device_model, app_type, version, remember_device }) {
+  if (!mobile || !/^[6-9]\d{9}$/.test(mobile)) {
+    throw new AppError("Invalid mobile number", 400, "INVALID_MOBILE");
+  }
+
+  if (!pin) {
+    return startLogin({ mobile, device_id, device_model, app_type });
+  }
+
+  return verifyPin({ mobile, pin, device_id, device_model, app_type, remember_device });
 }
 
 async function sendSetupOtp(mobile) {
@@ -196,6 +312,8 @@ async function logout(refreshToken) {
 
 module.exports = {
   checkMobileStatus,
+  startLogin,
+  verifyPin,
   login,
   sendSetupOtp,
   sendResetOtp,

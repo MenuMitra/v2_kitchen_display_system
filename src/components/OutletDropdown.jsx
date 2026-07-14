@@ -31,6 +31,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [hideDropdown, setHideDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const lastSyncedOutletIdRef = useRef(null);
   const autoSelectedOutletIdRef = useRef(null);
 
   // Sync local selected state with selectedOutlet prop
@@ -75,8 +76,10 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
       // and hide the dropdown (CDS-like behavior).
       if (activeOutlets.length === 1) {
         const onlyOutlet = activeOutlets[0];
+        const outletIdKey = String(onlyOutlet.outlet_id);
         const savedOutletId = localStorage.getItem("outlet_id");
-        const hasSameSavedOutlet = String(savedOutletId || "") === String(onlyOutlet.outlet_id);
+        const hasSameSavedOutlet = String(savedOutletId || "") === outletIdKey;
+        const alreadySyncedThisSession = lastSyncedOutletIdRef.current === outletIdKey;
 
         localStorage.setItem("outlet_id", onlyOutlet.outlet_id);
         localStorage.setItem("outlet_name", onlyOutlet.name);
@@ -84,24 +87,27 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
         setSelected(onlyOutlet);
         setHideDropdown(true);
 
-        // Avoid unnecessary parent notifications when outlet is already synced.
-        if (!hasSameSavedOutlet && typeof onSelect === "function") {
-          onSelect(onlyOutlet);
-        }
-
-        try {
-          queryClient.invalidateQueries({ queryKey: ["orders"], exact: false });
-          queryClient.refetchQueries({
-            queryKey: ["orders", Number(onlyOutlet.outlet_id)],
-            exact: false,
-          });
-        } catch (e) {
-          // no-op
+        // Only notify parent + refetch orders when the outlet actually changed.
+        if (!hasSameSavedOutlet || !alreadySyncedThisSession) {
+          lastSyncedOutletIdRef.current = outletIdKey;
+          if (!hasSameSavedOutlet && typeof onSelect === "function") {
+            onSelect(onlyOutlet);
+          }
+          try {
+            queryClient.invalidateQueries({ queryKey: ["orders"], exact: false });
+            queryClient.refetchQueries({
+              queryKey: ["orders", Number(onlyOutlet.outlet_id)],
+              exact: false,
+            });
+          } catch (e) {
+            // no-op
+          }
         }
         return;
       }
 
       setHideDropdown(false);
+      lastSyncedOutletIdRef.current = null;
     }
   }, [isLoading, onSelect, outletsData]);
 
@@ -119,6 +125,7 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     localStorage.setItem("outlet_id", outlet.outlet_id);
     localStorage.setItem("outlet_name", outlet.name);
     sessionStorage.removeItem("kds_fresh_login"); // Allow orders API after outlet selection
+    lastSyncedOutletIdRef.current = String(outlet.outlet_id);
     setSelected(outlet);
     setShow(false);
     setSearchTerm("");

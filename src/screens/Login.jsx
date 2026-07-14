@@ -24,6 +24,7 @@ function Login() {
   const [step, setStep] = useState(STEPS.MOBILE);
   const [mobileNumber, setMobileNumber] = useState("");
   const [pin, setPin] = useState("");
+  const [showPin, setShowPin] = useState(false);
   const [confirmPin, setConfirmPin] = useState("");
   const [otpValues, setOtpValues] = useState(["", "", "", ""]);
   const [loading, setLoading] = useState(false);
@@ -137,6 +138,7 @@ function Login() {
       }
 
       setPin("");
+      setShowPin(false);
       setStep(STEPS.PIN_ENTRY);
     } finally {
       setLoading(false);
@@ -332,6 +334,7 @@ function Login() {
     setStep(STEPS.MOBILE);
     setOtpValues(["", "", "", ""]);
     setPin("");
+    setShowPin(false);
     setConfirmPin("");
     setSetupToken("");
     setValidatedUser(null);
@@ -441,15 +444,26 @@ function Login() {
 
               {step === STEPS.PIN_ENTRY && (
                 <>
-                  <div className="text-center mt-2 mb-3 text-gray-700">
+                  <div className="text-center mt-2 text-gray-700">
                     Enter your 4-digit PIN for {mobileNumber}
                     {validatedUser?.name ? ` (${validatedUser.name})` : ""}
+                  </div>
+                  <div className="flex justify-center w-full px-2 sm:px-8 mt-1 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowPin((prev) => !prev)}
+                      className="text-sm font-medium rounded-3xl focus:outline-none hover:underline bg-transparent border-none p-0 text-blue-600 cursor-pointer"
+                      disabled={loading}
+                    >
+                      {showPin ? "Hide" : "Show"}
+                    </button>
                   </div>
                   <div className="mb-4 px-0 sm:px-4">
                     <PinInput
                       length={4}
                       value={pin}
                       onChange={setPin}
+                      showPin={showPin}
                       onComplete={(value) => {
                         if (!loading) handlePinLogin(value);
                       }}

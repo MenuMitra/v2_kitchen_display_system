@@ -3,6 +3,9 @@ const DEFAULT_MESSAGE = "Something went wrong. Please try again.";
 export const MOBILE_NOT_FOUND_MESSAGE =
   "User with this mobile number does not exist";
 
+export const NO_ACTIVE_SESSION_MESSAGE =
+  "No active login session found. Please login first.";
+
 /**
  * Extract a user-facing message from axios/API errors.
  */
@@ -46,6 +49,12 @@ export function isMobileNotFoundMessage(text) {
     lower.includes("user not found") ||
     lower.includes("not found with this mobile")
   );
+}
+
+export function isNoActiveSessionMessage(text) {
+  if (!text || typeof text !== "string") return false;
+  const lower = text.toLowerCase();
+  return lower.includes("no active login session") || lower.includes("please login first");
 }
 
 export function isPinRequiredMessage(text) {
