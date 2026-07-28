@@ -1,3 +1,5 @@
+import packageJson from "../package.json";
+
 // SINGLE SWITCH: change this to 'production' | 'testing' | 'development'
 export const CURRENT_ENV = 'production';
 
@@ -53,7 +55,13 @@ export const VAPID_KEY = "BGsWfw7acs_yXMa_bcWfw-49_MQkV8MdSOrCih9OO-v9pQ7AvKA2ni
 // add at the bottom (or export from wherever you prefer)
 export const APP_INFO = {
   name: "MenuMitra",
-  version: "2.2.0",
-  releaseDate: "17 March 2026",
+  version: process.env.REACT_APP_APP_VERSION || packageJson?.version || "0.0.0",
+  releaseDate:
+    process.env.REACT_APP_BUILD_DATE ||
+    new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }),
 };
 

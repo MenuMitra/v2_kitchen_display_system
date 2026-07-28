@@ -1,6 +1,6 @@
 {
   "name": "menumitra_kitchen_display_system",
-  "version": "0.2.2",
+  "version": "2.3.0",
   "private": true,
   "dependencies": {
     "@firebase/messaging": "^0.12.16",
@@ -26,7 +26,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "CI=false react-scripts build && cp build/index.html build/404.html",
+    "build": "CI=false REACT_APP_APP_VERSION=$(node -p \"require('./package.json').version\") REACT_APP_BUILD_DATE=\"$(node -e 'const d=new Date(); process.stdout.write(d.toLocaleDateString(\"en-GB\",{day:\"2-digit\",month:\"long\",year:\"numeric\"}));')\" react-scripts build && cp build/index.html build/404.html",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
