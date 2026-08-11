@@ -1025,13 +1025,16 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                   <p className="text-xl md:text-2xl font-bold mb-0 flex items-center">
                     {order.order_number}
                   </p>
-                  <p className="mb-0 text-base md:text-xl capitalize font-semibold">
-                    {order.section_name
-                      ? order.section_name
-                      : `${order.order_type}${order.table_number?.length
+                  <p className="mb-0 text-base md:text-xl capitalize font-semibold text-right">
+                    {order.section_name ? (
+                      <span className="block">{order.section_name}</span>
+                    ) : null}
+                    <span className={order.section_name ? "block text-sm md:text-base font-medium opacity-90" : ""}>
+                      {`${order.order_type || ""}${order.table_number?.length
                         ? ` - ${order.table_number.join(", ")}`
                         : ""
                       }`}
+                    </span>
                   </p>
                 </div>
               </div>
