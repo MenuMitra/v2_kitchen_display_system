@@ -1,7 +1,7 @@
 import packageJson from "../package.json";
 
 // SINGLE SWITCH: change this to 'production' | 'testing' | 'development'
-export const CURRENT_ENV = 'production';
+export const CURRENT_ENV = 'testing';
 
 // Host configuration per environment
 const CONFIG = {
@@ -23,6 +23,9 @@ const { API_HOST, WS_URL } = CONFIG[CURRENT_ENV] || CONFIG.development;
 
 // Common base paths used across the app (v2.3)
 export const V2_COMMON_BASE = `${API_HOST}/v2.3/common`;
+
+// Realtime orders: wss://<API_HOST>/v2.3/common/ws/<outlet_id>
+export const WS_ORDER_BASE = `${String(API_HOST).replace(/^https:/, "wss:")}/v2.3/common/ws`;
 export const V2_3_COMMON_BASE = V2_COMMON_BASE;
 export const COMMON_API_BASE = `${API_HOST}/common_api`;
 
