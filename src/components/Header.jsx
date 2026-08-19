@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import OutletDropdown from "./OutletDropdown";
@@ -7,6 +7,13 @@ import { ENV } from "../config/env";
 import { V2_COMMON_BASE } from "../config";
 import { buildAuthHeaders, getLogoutBody } from "../utils/apiClient";
 import { clearAuthSession } from "../utils/authStorage";
+import {
+  SOUND_OPTIONS,
+  getSelectedAlertSound,
+  getSoundLabel,
+  playOrderAlertSound,
+  setSelectedAlertSound,
+} from "../utils/orderAlertSound";
 
 
 function Header({
@@ -27,6 +34,10 @@ function Header({
   const [isFullscreenHovered, setIsFullscreenHovered] = useState(false);
   const [isLogoutHovered, setIsLogoutHovered] = useState(false);
   const [isCancelHovered, setIsCancelHovered] = useState(false);
+  const [selectedSound, setSelectedSound] = useState(() => getSelectedAlertSound());
+  const [showSoundMenu, setShowSoundMenu] = useState(false);
+  const [isSoundHovered, setIsSoundHovered] = useState(false);
+  const soundMenuRef = useRef(null);
 
   const userId = localStorage.getItem("user_id");
   const navigate = useNavigate();
@@ -41,6 +52,23 @@ function Header({
     return () =>
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (soundMenuRef.current && !soundMenuRef.current.contains(event.target)) {
+        setShowSoundMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSoundSelect = (soundValue) => {
+    setSelectedAlertSound(soundValue);
+    setSelectedSound(soundValue);
+    setShowSoundMenu(false);
+    playOrderAlertSound(soundValue);
+  };
 
   const handleFullscreen = async () => {
     const elem = document.documentElement;
@@ -168,6 +196,36 @@ function Header({
 
                 {/* Action Icons */}
                 <div className="flex items-center justify-between w-full md:w-auto gap-2">
+                  <div className="relative" ref={soundMenuRef}>
+                    <button
+                      type="button"
+                      className={`min-w-[120px] h-[45px] px-3 flex items-center justify-between gap-2 border-2 border-gray-400 rounded-3xl text-gray-600 transition-colors ${isSoundHovered || showSoundMenu ? "bg-gray-100 border-gray-500" : "bg-white"}`}
+                      title="Alert sound"
+                      onClick={() => setShowSoundMenu((open) => !open)}
+                      onMouseEnter={() => setIsSoundHovered(true)}
+                      onMouseLeave={() => setIsSoundHovered(false)}
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <i className="fa-solid fa-volume-high text-base" />
+                        {getSoundLabel(selectedSound)}
+                      </span>
+                      <i className={`fa-solid fa-chevron-down text-xs transition-transform ${showSoundMenu ? "rotate-180" : ""}`} />
+                    </button>
+                    {showSoundMenu && (
+                      <div className="absolute top-[calc(100%+6px)] left-0 min-w-full bg-white border border-gray-200 rounded-xl shadow-lg z-[60] overflow-hidden">
+                        {SOUND_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${selectedSound === option.value ? "bg-blue-50 text-[#1673ff] font-semibold" : "text-gray-700 hover:bg-gray-100"}`}
+                            onClick={() => handleSoundSelect(option.value)}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button
                     className={`w-[45px] h-[45px] flex items-center justify-center border-2 border-gray-400 rounded-3xl text-gray-500 transition-colors ${isRefreshHovered ? "bg-gray-100 border-gray-500" : "bg-white"}`}
                     title="Refresh"

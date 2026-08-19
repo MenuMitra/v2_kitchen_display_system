@@ -14,6 +14,7 @@ import { V2_COMMON_BASE, COMMON_API_BASE, WS_ORDER_BASE } from "../config";
 import { buildAuthHeaders, getDeviceSessionFields } from "../utils/apiClient";
 import { logoutAndRedirect } from "../utils/authStorage";
 import { createOrderWebSocket } from "../utils/orderWebSocket";
+import { notifyOrderEvent, requestNotificationPermission } from "../utils/orderNotifications";
 
 const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const navigate = useNavigate();
@@ -34,6 +35,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const [, setOutletSelectKey] = useState(0); // Forces re-render when outlet selected
 
   const autoProcessingRef = useRef(new Set());
+  const hasInitialOrdersLoadedRef = useRef(false);
 
   // Backend may return inconsistent item-level statuses during refresh.
   // Remember which specific menu/combo items the user marked as "served",
@@ -185,7 +187,12 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     setError(null);
     setIsWsConnected(false);
     setInitialLoading(canConnectWs);
+    hasInitialOrdersLoadedRef.current = false;
   }, [currentOutletId, canConnectWs]);
+
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   // Fetch cds_kds_order_listview only after the outlet WebSocket is connected.
   // Note: queryKey does NOT include filter to prevent cache invalidation on filter change
@@ -240,7 +247,10 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       accessToken,
       onOpen: () => setIsWsConnected(true),
       onClose: () => setIsWsConnected(false),
-      onOrderEvent: () => {
+      onOrderEvent: (payload) => {
+        if (hasInitialOrdersLoadedRef.current) {
+          notifyOrderEvent(payload);
+        }
         refetch();
       },
     });
@@ -578,6 +588,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       setLastRefreshTime(new Date().toLocaleTimeString());
       setError(null);
       setInitialLoading(false);
+      hasInitialOrdersLoadedRef.current = true;
 
       // snapshot current menus by order for "new item" detection on the NEXT refresh
       try {
