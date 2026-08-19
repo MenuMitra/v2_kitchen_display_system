@@ -24,11 +24,13 @@ const { API_HOST, WS_URL } = CONFIG[CURRENT_ENV];
 // Common base paths used across the app
 const V2_COMMON_BASE = `${API_HOST}/v2.3/common`;
 const COMMON_API_BASE = `${API_HOST}/common_api`;
+const WS_ORDER_BASE = `${String(API_HOST).replace(/^https:/, "wss:")}/v2.3/common/ws`;
 
 export const ENV = {
   env: CURRENT_ENV,
   API_HOST,
   WS_URL,
+  WS_ORDER_BASE,
   V2_COMMON_BASE,
   COMMON_API_BASE,
 };

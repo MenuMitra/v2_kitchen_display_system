@@ -10,9 +10,10 @@ import React, {
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { V2_COMMON_BASE, COMMON_API_BASE } from "../config";
+import { V2_COMMON_BASE, COMMON_API_BASE, WS_ORDER_BASE } from "../config";
 import { buildAuthHeaders, getDeviceSessionFields } from "../utils/apiClient";
 import { logoutAndRedirect } from "../utils/authStorage";
+import { createOrderWebSocket } from "../utils/orderWebSocket";
 
 const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const [subscriptionData, setSubscriptionData] = useState(null);
 
   const [initialLoading, setInitialLoading] = useState(true);
+  const [isWsConnected, setIsWsConnected] = useState(false);
   const [error, setError] = useState(null);
   const [previousMenuItems, setPreviousMenuItems] = useState({});
   const [filter, setFilter] = useState("today");
@@ -157,9 +159,10 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const accessToken = localStorage.getItem("access_token");
   const deviceId = localStorage.getItem("device_id");
 
-  // Block orders API until user explicitly selects outlet (prevents API call on login)
+  // Block orders API until outlet is selected AND the live WebSocket is connected.
   const isFreshLogin = typeof sessionStorage !== "undefined" && !!sessionStorage.getItem("kds_fresh_login");
-  const shouldFetchOrders = !!accessToken && isValidOutletId && !isFreshLogin;
+  const canConnectWs = !!accessToken && isValidOutletId && !isFreshLogin;
+  const shouldFetchOrders = canConnectWs && isWsConnected;
 
   const previousOutletRef = useRef(currentOutletId);
 
@@ -180,20 +183,21 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
     setSubscriptionData(null);
     setLastRefreshTime(null);
     setError(null);
-    setInitialLoading(shouldFetchOrders);
-  }, [currentOutletId, shouldFetchOrders]);
+    setIsWsConnected(false);
+    setInitialLoading(canConnectWs);
+  }, [currentOutletId, canConnectWs]);
 
-  // TanStack Query: fetch orders every 30s, cached 30s
+  // Fetch cds_kds_order_listview only after the outlet WebSocket is connected.
   // Note: queryKey does NOT include filter to prevent cache invalidation on filter change
   const {
     data: ordersResponse,
     refetch,
-    isFetching,
     isLoading: queryLoading,
     error: queryError,
   } = useQuery({
     queryKey: ["orders", isValidOutletId ? numericOutletId : null],
     enabled: shouldFetchOrders,
+    staleTime: 0,
     refetchInterval: false,
     placeholderData: keepPreviousData,
     queryFn: async () => {
@@ -222,6 +226,30 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       return result || {};
     },
   });
+
+  // Connect live order socket first; listview is gated on isWsConnected.
+  useEffect(() => {
+    if (!canConnectWs || !currentOutletId || !accessToken) {
+      setIsWsConnected(false);
+      return undefined;
+    }
+
+    const connection = createOrderWebSocket({
+      wsBaseUrl: WS_ORDER_BASE,
+      outletId: currentOutletId,
+      accessToken,
+      onOpen: () => setIsWsConnected(true),
+      onClose: () => setIsWsConnected(false),
+      onOrderEvent: () => {
+        refetch();
+      },
+    });
+
+    return () => {
+      connection?.close();
+      setIsWsConnected(false);
+    };
+  }, [accessToken, canConnectWs, currentOutletId, refetch]);
 
   const optimisticOrdersRef = useRef(new Map());
 
@@ -405,7 +433,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
   // Mirror query data into local UI state
   useEffect(() => {
-    if (queryLoading && ordersResponse === undefined) {
+    if (canConnectWs && ordersResponse === undefined && (!isWsConnected || queryLoading)) {
       setInitialLoading(true);
       return;
     }
@@ -579,25 +607,15 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         autoAcceptPlacedOrders(result.placed_orders);
       }
     }
-  }, [ordersResponse, queryLoading, queryError, manualMode, onSubscriptionDataChange, autoAcceptPlacedOrders, getLocalServedOrders, saveLocalServedOrder]);
+  }, [canConnectWs, isWsConnected, ordersResponse, queryLoading, queryError, manualMode, onSubscriptionDataChange, autoAcceptPlacedOrders, getLocalServedOrders, saveLocalServedOrder]);
 
-  // Add periodic refresh for faster updates
+  // Refetch when the date filter changes. Do not refetch just because the
+  // WebSocket connected — enabling the query already loads the list.
+  const previousFilterRef = useRef(filter);
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Don't force-fetch until outlet is selected and "fresh login" gate is cleared.
-      // React Query `refetch()` bypasses `enabled`, so we must guard here.
-      if (shouldFetchOrders && !isFetching && !queryLoading && !queryError) {
-        console.log('Periodic refresh triggered...');
-        refetch();
-      }
-    }, 10000); // Refresh every 10 seconds
-
-    return () => clearInterval(interval);
-  }, [shouldFetchOrders, isFetching, queryLoading, queryError, refetch]);
-
-  // Refetch when filter changes
-  useEffect(() => {
-    if (shouldFetchOrders) {
+    const filterChanged = previousFilterRef.current !== filter;
+    previousFilterRef.current = filter;
+    if (filterChanged && shouldFetchOrders) {
       refetch();
     }
   }, [filter, refetch, shouldFetchOrders]);
@@ -1215,7 +1233,9 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         <div className="flex flex-col flex-grow">
           <div className="flex-grow p-3">
             {initialLoading && (
-              <div className="text-center mt-5 text-gray-600">Loading orders...</div>
+              <div className="text-center mt-5 text-gray-600">
+                {isWsConnected ? "Loading orders..." : "Connecting to live orders..."}
+              </div>
             )}
             {error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-center mt-5">{error}</div>

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { V2_COMMON_BASE } from "../config";
 import { useQuery } from "@tanstack/react-query";
-import { queryClient } from "./cache";
 import { buildAuthHeaders, getAccessToken, getAdminSessionBody } from "../utils/apiClient";
 
 const toTitleCase = (str) => {
@@ -87,20 +86,11 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
         setSelected(onlyOutlet);
         setHideDropdown(true);
 
-        // Only notify parent + refetch orders when the outlet actually changed.
+        // Notify parent so OrdersList can connect the WebSocket, then fetch listview.
         if (!hasSameSavedOutlet || !alreadySyncedThisSession) {
           lastSyncedOutletIdRef.current = outletIdKey;
-          if (!hasSameSavedOutlet && typeof onSelect === "function") {
+          if (typeof onSelect === "function") {
             onSelect(onlyOutlet);
-          }
-          try {
-            queryClient.invalidateQueries({ queryKey: ["orders"], exact: false });
-            queryClient.refetchQueries({
-              queryKey: ["orders", Number(onlyOutlet.outlet_id)],
-              exact: false,
-            });
-          } catch (e) {
-            // no-op
           }
         }
         return;
@@ -131,13 +121,6 @@ const OutletDropdown = ({ onSelect, selectedOutlet }) => {
     setSearchTerm("");
     if (typeof onSelect === "function") {
       onSelect(outlet);
-    }
-    // Immediately refresh orders queries for the selected outlet
-    try {
-      queryClient.invalidateQueries({ queryKey: ["orders"], exact: false });
-      queryClient.refetchQueries({ queryKey: ["orders", outlet.outlet_id], exact: false });
-    } catch (e) {
-      // no-op
     }
   };
 

@@ -44,7 +44,9 @@ const SubscriptionRemainDay = ({ selectedOutlet, dateRange, subscriptionData: pr
 
   const { data: subscriptionFromQuery, isLoading, error: queryError } = useQuery({
     queryKey: ['subscription', selectedOutlet?.outlet_id, dateRange],
-    enabled: !!selectedOutlet?.outlet_id && !propSubscriptionData,
+    // OrdersList fetches cds_kds_order_listview after WebSocket connect and passes
+    // subscription_details down. Do not call that API independently from the header.
+    enabled: false,
     queryFn: fetchSubscriptionData,
   });
 
