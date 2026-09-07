@@ -1236,6 +1236,6 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       )}
     </div>
   );
-}
+});
 
 export default React.memo(OrdersList);
