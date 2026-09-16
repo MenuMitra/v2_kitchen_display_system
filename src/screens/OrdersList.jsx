@@ -32,6 +32,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
   const [previousMenuItems, setPreviousMenuItems] = useState({});
   const [filter, setFilter] = useState("today");
   const [lastRefreshTime, setLastRefreshTime] = useState(null);
+  const [activeTab, setActiveTab] = useState("ALL");
   const [, setOutletSelectKey] = useState(0); // Forces re-render when outlet selected
 
   const autoProcessingRef = useRef(new Set());
@@ -984,243 +985,199 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
 
       return orders.map((order) => {
         const prevMenuItems = previousMenuItems[order.order_id] || [];
-        // Map type to Tailwind colors
-        let borderColorClass = "border-[#6c757d]";
-        let bgOpacityClass = "bg-gray-500/10";
 
-        if (type === "warning") {
-          borderColorClass = "border-[#ffc107]";
-          bgOpacityClass = "bg-yellow-500/10";
-        } else if (type === "success") {
-          borderColorClass = "border-[#198754]";
-          bgOpacityClass = "bg-green-500/10";
-        }
-
-        // Filter menus per section
+        // In Pick Up (success), only show served items. In warning/placed, keep all items.
         let visibleMenus = Array.isArray(order.menu_details) ? order.menu_details : [];
-        if (type === "warning") {
-          // Cooking column shows non-served items
-          visibleMenus = visibleMenus.filter(
-            (m) => (m.menu_status || "cooking") !== "served"
-          );
-        } else if (type === "success") {
-          // Pick Up column shows served items
+        if (type === "success") {
           visibleMenus = visibleMenus.filter((m) => m.menu_status === "served");
         }
+        // Place unserved (about to serve) items on top, and served items at the bottom
+        visibleMenus = [...visibleMenus].sort((a, b) => {
+          const aServed = (a.menu_status || "cooking") === "served";
+          const bServed = (b.menu_status || "cooking") === "served";
+          if (aServed === bServed) return 0;
+          return aServed ? 1 : -1;
+        });
 
-        // Filter combos per section (used for "should we render this card?" only)
-        // Combo rendering itself uses `order.combo_details` that is already filtered in parent.
         let visibleCombos = Array.isArray(order.combo_details) ? order.combo_details : [];
-        if (type === "warning") {
-          visibleCombos = visibleCombos.filter(
-            (c) => (c.menu_status || "cooking") !== "served"
-          );
-        } else if (type === "success") {
+        if (type === "success") {
           visibleCombos = visibleCombos.filter((c) => c.menu_status === "served");
         }
+        visibleCombos = [...visibleCombos].sort((a, b) => {
+          const aServed = (a.menu_status || "cooking") === "served";
+          const bServed = (b.menu_status || "cooking") === "served";
+          if (aServed === bServed) return 0;
+          return aServed ? 1 : -1;
+        });
 
-        // Sort: new items first in Cooking
-        if (type === "warning" && prevMenuItems.length) {
-          visibleMenus = [...visibleMenus].sort((a, b) => {
-            const aNew = !prevMenuItems.includes(a.menu_name);
-            const bNew = !prevMenuItems.includes(b.menu_name);
-            if (aNew === bNew) return 0;
-            return aNew ? -1 : 1;
-          });
-        }
-
-        // Skip rendering card if no visible items for this section
-        // UNLESS the order status explicitly matches this column's type (Placed/Cooking/Served)
         const isPrimaryColumn =
           (type === "placed" && order.order_status === "placed") ||
           (type === "warning" && order.order_status === "cooking") ||
           (type === "success" && order.order_status === "served");
 
-        // Cooking stage must never show an "empty" card.
-        // If all items are served, hide it even if server order_status is stale.
         if (type === "warning" && !visibleMenus.length && !visibleCombos.length) return null;
-
-        // If there are no visible menu items but there are visible combo items,
-        // we still need to render the card (otherwise served combos won't show in Pickup).
         if (!visibleMenus.length && !visibleCombos.length && !isPrimaryColumn) return null;
 
         return (
-          <div className="w-full" key={order.order_id}>
-            <div
-              className="bg-white rounded-lg shadow h-auto w-full inline-block overflow-hidden"
-            >
-              <div className={`${bgOpacityClass} py-2 md:py-2 px-3`}>
-                <div className="flex justify-between items-center flex-wrap gap-1 md:gap-0">
-                  <p className="text-xl md:text-2xl font-bold mb-0 flex items-center">
-                    {order.order_number}
-                  </p>
-                  <p className="mb-0 text-base md:text-xl capitalize font-semibold text-right">
-                    {order.section_name ? (
-                      <span className="block">{order.section_name}</span>
-                    ) : null}
-                    <span className={order.section_name ? "block text-sm md:text-base font-medium opacity-90" : ""}>
-                      {`${order.order_type || ""}${order.table_number?.length
-                        ? ` - ${order.table_number.join(", ")}`
-                        : ""
-                      }`}
+          <div className="bg-[#dcdcdc] rounded-xl p-4 flex flex-col h-[400px]" key={order.order_id}>
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <div className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  {order.order_number}
+                  {order.order_type && (
+                    <span className="bg-[#d27e26] text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+                      {order.order_type}
                     </span>
-                  </p>
+                  )}
                 </div>
+                {order.section_name && (
+                  <div className="text-sm font-bold text-gray-700 mt-1">{order.section_name} {order.table_number?.length ? ` - ${order.table_number.join(", ")}` : ""}</div>
+                )}
               </div>
-              <div className="p-1">
-                {Array.isArray(visibleMenus) && (
-                  <div className={visibleMenus.length > 6 ? "overflow-y-auto pr-[2px] max-h-[250px] sm:max-h-[350px] lg:max-h-[400px] [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-track]:bg-[#f1f1f1] [&::-webkit-scrollbar-track]:rounded-[2px] [&::-webkit-scrollbar-thumb]:bg-[#888] [&::-webkit-scrollbar-thumb]:rounded-[2px] hover:[&::-webkit-scrollbar-thumb]:bg-[#555]" : ""}>
-                    {visibleMenus.map((menu, index) => {
-                      const isNewItem =
-                        prevMenuItems.length > 0 &&
-                        !prevMenuItems.includes(menu.menu_name);
-
-                      const hrColor =
-                        foodTypeColors[menu.food_type.toLowerCase()] || "#f21717";
-
-                      return (
-                        <div
-                          className={`flex flex-wrap justify-between items-center ${type === "placed" ? "border-l-[3px]" : ""} pl-2 mb-0 ${borderColorClass}`}
-                          key={index}
-
-                        >
-                          <div
-                            className={`flex font-semibold capitalize items-center flex-auto min-w-[120px] text-[14px] sm:text-[14px] md:text-[16px] lg:text-[18px] ${isNewItem ? "text-red-500" : ""
-                              }`}
-                          >
-                            <hr
-                              className="h-[10px] w-[3px] mr-[5px] p-0 border-0"
-                              style={{
-                                backgroundColor: hrColor,
-                              }}
-                            />
-                            <p className="mb-0 p-0">
-                              {menu.menu_name}
-                              {menu.portions_name ? (
-                                <span className="text-gray-400 font-medium ml-2">
-                                  - <span className="capitalize">{menu.portions_name}</span>
-                                </span>
-                              ) : null}
-                            </p>
-                          </div>
-                          <div
-                            className={`font-semibold capitalize text-[12px] sm:text-[12px] md:text-[14px] lg:text-[18px] ${isNewItem ? "text-red-500" : ""
-                              }`}
-                          >
-                            {menu.half_or_full && menu.half_or_full.toLowerCase() !== 'combo' && menu.half_or_full}
-                          </div>
-                          <div
-                            className="flex items-center text-right gap-1 md:gap-2 pr-2.5"
-                          >
-                            <span className="font-semibold text-[14px] sm:text-[14px] md:text-[16px] lg:text-[18px]">
-                              × {menu.quantity}
-                            </span>
-                            {manualMode &&
-                              type === "warning" &&
-                              !isSuperOwner &&
-                              order.kds_button_enabled === 1 && (
-                                <button
-                                  className="px-2 py-1 text-xs sm:text-xs bg-green-800 text-white rounded-3xl hover:bg-green-600 transition-colors"
-                                  onClick={() => handleServeMenuItem(order.order_id, menu)}
-                                >
-                                  <span className="hidden sm:inline">Served</span>
-                                  <span className="sm:hidden">✓</span>
-                                </button>
-                              )}
-                          </div>
-                          {menu.comment && (
-                            <div
-                              className="w-full text-left text-gray-500 text-xs"
-                            >
-                              <span>{menu.comment}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Render combo items from combo_details */}
-                {Array.isArray(order.combo_details) && order.combo_details.length > 0 && (
-                  <div>
-                    {order.combo_details.map((combo, index) => {
-                      const comboHrColor =
-                        foodTypeColors[(combo.combo_food_type || "").toLowerCase()] || "#f21717";
-
-                      return (
-                        <div
-                          className={`flex flex-wrap justify-between items-center ${type === "placed" ? "border-l-[3px]" : ""} pl-2 mb-0 ${borderColorClass}`}
-                          key={`combo-${index}`}
-                        >
-                          <div className="flex font-semibold capitalize items-center flex-auto min-w-[120px] text-[14px] sm:text-[14px] md:text-[16px] lg:text-[18px]">
-                            <hr
-                              className="h-[10px] w-[3px] mr-[5px] p-0 border-0"
-                              style={{ backgroundColor: comboHrColor }}
-                            />
-                            <p className="mb-0 p-0">{combo.combo_name}</p>
-                          </div>
-                          <div className="font-semibold capitalize text-[12px] sm:text-[12px] md:text-[14px] lg:text-[18px]">
-                          </div>
-                          <div className="flex items-center text-right gap-1 md:gap-2 pr-2.5">
-                            <span className="font-semibold text-[14px] sm:text-[14px] md:text-[16px] lg:text-[18px]">
-                              × {combo.quantity}
-                            </span>
-                            {manualMode &&
-                              type === "warning" &&
-                              !isSuperOwner &&
-                              order.kds_button_enabled === 1 &&
-                              (combo.menu_status || "cooking") !== "served" && (
-                                <button
-                                  className="px-2 py-1 text-xs sm:text-xs bg-green-800 text-white rounded-3xl hover:bg-green-600 transition-colors"
-                                  onClick={() => handleServeComboItem(order.order_id, combo)}
-                                >
-                                  <span className="hidden sm:inline">Served</span>
-                                  <span className="sm:hidden">✓</span>
-                                </button>
-                              )}
-                          </div>
-                          {combo.comment && (
-                            <div className="w-full text-left text-gray-500 text-xs">
-                              <span>{combo.comment}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Only show Complete Order button if kds_button_enabled = 1 */}
-                {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
-                  <button
-                    className="w-full py-2 bg-green-800 text-white rounded-3xl hover:bg-green-600 transition-colors text-sm md:text-base font-medium mt-2"
-                    onClick={() => updateOrderStatus(order.order_id, "served")}
-                  >
-                    <span className="hidden sm:inline">Complete Order</span>
-                    <span className="sm:hidden">Complete</span>
-                  </button>
-                )}
-
-                {/* Render countdown */}
-                {manualMode && order.order_status === "placed" && !isSuperOwner && (
-                  <div className="flex justify-end mt-2">
-                    <CircularCountdown orderId={order.order_id} order={order} />
-                  </div>
-                )}
+              <div className="flex items-center gap-2">
+                <div className="text-xl font-bold text-gray-800">
+                  {order.date_time ? new Date(order.date_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ""}
+                </div>
+                {manualMode && order.order_status === "placed" && !isSuperOwner ? (
+                  <CircularCountdown orderId={order.order_id} order={order} />
+                ) : null}
               </div>
             </div>
+            
+            <div className="flex-grow overflow-y-auto pr-1">
+              {visibleMenus.map((menu, index) => {
+                const isServed = (menu.menu_status || "cooking") === "served";
+                const isNewItem = !isServed && prevMenuItems.length > 0 && !prevMenuItems.includes(menu.menu_name);
+                return (
+                  <div className={`flex items-start gap-3 border-b border-gray-300 pb-2 mb-2 ${isServed ? "opacity-75" : ""}`} key={index}>
+                    <span className="text-gray-500 bg-gray-200 rounded-full px-2 py-0.5 text-xs font-bold mt-1">x{menu.quantity}</span>
+                    <div className="flex-grow">
+                      <div className={`font-bold text-lg ${isServed ? "text-gray-500" : isNewItem ? "text-red-600" : "text-gray-800"}`}>
+                        {menu.menu_name}
+                      </div>
+                      {(menu.portions_name || menu.comment || menu.half_or_full) && (
+                        <div className="mt-1 pl-1">
+                          {menu.portions_name && <div className="text-xs text-blue-600 font-bold uppercase mb-1">SIZE: {menu.portions_name}</div>}
+                          {menu.half_or_full && menu.half_or_full.toLowerCase() !== 'combo' && <div className="text-xs text-blue-600 font-bold uppercase mb-1">{menu.half_or_full}</div>}
+                          {menu.comment && <div className="text-xs text-gray-500 font-bold mt-1">{menu.comment}</div>}
+                        </div>
+                      )}
+                    </div>
+                    {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
+                      isServed ? (
+                        <button
+                          disabled
+                          className="px-2 py-1 text-xs bg-gray-400 text-white rounded shadow cursor-not-allowed opacity-80"
+                        >
+                          Served
+                        </button>
+                      ) : (
+                        <button
+                          className="px-2 py-1 text-xs bg-green-700 text-white rounded shadow hover:bg-green-600"
+                          onClick={() => handleServeMenuItem(order.order_id, menu)}
+                        >
+                          Served
+                        </button>
+                      )
+                    )}
+                  </div>
+                );
+              })}
+              
+              {visibleCombos.map((combo, index) => {
+                const isServed = (combo.menu_status || "cooking") === "served";
+                return (
+                  <div className={`flex items-start gap-3 border-b border-gray-300 pb-2 mb-2 ${isServed ? "opacity-75" : ""}`} key={`combo-${index}`}>
+                    <span className="text-gray-500 bg-gray-200 rounded-full px-2 py-0.5 text-xs font-bold mt-1">x{combo.quantity}</span>
+                    <div className="flex-grow">
+                      <div className={`font-bold text-lg ${isServed ? "text-gray-500" : "text-gray-800"}`}>{combo.combo_name}</div>
+                      {combo.comment && <div className="text-xs text-gray-500 font-bold mt-1">{combo.comment}</div>}
+                    </div>
+                    {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
+                      isServed ? (
+                        <button
+                          disabled
+                          className="px-2 py-1 text-xs bg-gray-400 text-white rounded shadow cursor-not-allowed opacity-80"
+                        >
+                          Served
+                        </button>
+                      ) : (
+                        <button
+                          className="px-2 py-1 text-xs bg-green-700 text-white rounded shadow hover:bg-green-600"
+                          onClick={() => handleServeComboItem(order.order_id, combo)}
+                        >
+                          Served
+                        </button>
+                      )
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
+              <div className="mt-auto pt-4">
+                <button 
+                  className="w-full bg-[#242c38] text-white rounded-lg py-2 text-sm font-bold shadow hover:bg-gray-800"
+                  onClick={() => updateOrderStatus(order.order_id, "served")}
+                >
+                  COMPLETE ORDER
+                </button>
+              </div>
+            )}
           </div>
         );
       });
     },
-    [foodTypeColors, handleServeComboItem, handleServeMenuItem, manualMode, previousMenuItems, updateOrderStatus, userRole]
+    [handleServeComboItem, handleServeMenuItem, manualMode, previousMenuItems, updateOrderStatus, userRole]
   );
 
   const outletName = localStorage.getItem("outlet_name");
 
+  // Prepare merged pick up array
+  const mergedPickUp = useMemo(() => {
+    const map = new Map();
+    [...cookingOrders, ...servedOrders].forEach((o) => {
+      const existing = map.get(o.order_id);
+      if (!existing || existing.order_status !== "served") {
+        map.set(o.order_id, o);
+      }
+    });
+    const orders = Array.from(map.values()).map((o) => ({
+      ...o,
+      order_status: o.order_status === "served" ? "served" : "cooking",
+      menu_details: Array.isArray(o.menu_details) ? o.menu_details.filter((m) => m.menu_status === "served") : [],
+      combo_details: Array.isArray(o.combo_details) ? o.combo_details.filter((c) => c.menu_status === "served") : [],
+    }));
+    return orders.sort((a, b) => new Date(b.date_time || 0).getTime() - new Date(a.date_time || 0).getTime());
+  }, [cookingOrders, servedOrders]);
+
+  const allOrders = useMemo(() => {
+    // Unique list of all orders for the ALL tab
+    const map = new Map();
+    [...placedOrders, ...cookingOrders, ...servedOrders].forEach(o => map.set(o.order_id, o));
+    return Array.from(map.values()).sort((a, b) => new Date(b.date_time || 0).getTime() - new Date(a.date_time || 0).getTime());
+  }, [placedOrders, cookingOrders, servedOrders]);
+
+  const getFilteredOrders = () => {
+    if (activeTab === "ALL") {
+      // Just showing them as placed for display purposes if we don't have a mixed renderer
+      // But actually we might need to map them with their actual type.
+      return allOrders.map(o => {
+        let t = "placed";
+        if (o.order_status === "cooking") t = "warning";
+        if (o.order_status === "served") t = "success";
+        return renderOrders([o], t);
+      });
+    }
+    if (activeTab === "PLACED") return renderOrders(placedOrders, "placed");
+    if (activeTab === "COOKING") return renderOrders(cookingOrders, "warning");
+    if (activeTab === "PICK UP") return renderOrders(mergedPickUp, "success");
+    return null;
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-[#1c2128] font-sans">
       <Header
         outletName={localStorage.getItem("outlet_name") || ""}
         filter={filter}
@@ -1242,9 +1199,39 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         </div>
       ) : (
         <div className="flex flex-col flex-grow">
-          <div className="flex-grow p-3">
+          {/* Black Tabs Bar */}
+          <div className="bg-[#121418] text-white px-4 py-2 flex items-center border-b border-[#2c313a]">
+            <div className="flex gap-2 flex-grow overflow-x-auto text-sm font-bold tracking-wider">
+              <button 
+                onClick={() => setActiveTab("ALL")}
+                className={`px-4 py-1.5 rounded-full ${activeTab === "ALL" ? "bg-gray-200 text-gray-900" : "text-gray-400 hover:text-white"}`}
+              >
+                ALL ({allOrders.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab("PLACED")}
+                className={`px-4 py-1.5 rounded-full ${activeTab === "PLACED" ? "bg-gray-200 text-gray-900" : "text-gray-400 hover:text-white"}`}
+              >
+                PLACED ({placedOrders.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab("COOKING")}
+                className={`px-4 py-1.5 rounded-full ${activeTab === "COOKING" ? "bg-gray-200 text-gray-900" : "text-gray-400 hover:text-white"}`}
+              >
+                COOKING ({cookingOrders.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab("PICK UP")}
+                className={`px-4 py-1.5 rounded-full ${activeTab === "PICK UP" ? "bg-gray-200 text-gray-900" : "text-gray-400 hover:text-white"}`}
+              >
+                PICK UP ({mergedPickUp.length})
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-grow p-4">
             {initialLoading && (
-              <div className="text-center mt-5 text-gray-600">
+              <div className="text-center mt-5 text-gray-400">
                 {isWsConnected ? "Loading orders..." : "Connecting to live orders..."}
               </div>
             )}
@@ -1253,80 +1240,12 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
             )}
 
             {!initialLoading && !error && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3">
-
-                <div className="mb-3 md:mb-0">
-                  <h4 className="text-3xl text-white text-center font-bold mb-2 md:mb-3 lg:mb-4 bg-gray-500 py-2 md:py-3 flex items-center justify-center rounded-lg">
-                    <span className="text-xl md:text-2xl lg:text-3xl">Placed ({placedOrders.length})</span>
-                  </h4>
-                  <div className="grid grid-cols-1 gap-2 md:gap-3">{renderOrders(placedOrders, "placed")}</div>
-                </div>
-                <div className="mb-3 md:mb-0">
-                  <h4 className="text-3xl text-white text-center font-bold mb-2 md:mb-3 lg:mb-4 bg-yellow-500 py-2 md:py-3 flex items-center justify-center rounded-lg">
-                    <span className="text-xl md:text-2xl lg:text-3xl">Cooking ({cookingOrders.length})</span>
-                  </h4>
-                  {/*
-                    For Cooking: only show items that are not yet served in each order
-                  */}
-                  <div className="grid grid-cols-1 gap-2 md:gap-3 justify-center">
-                    {renderOrders(
-                      cookingOrders.map((o) => ({
-                        ...o,
-                        menu_details: Array.isArray(o.menu_details)
-                          ? o.menu_details.filter((m) => (m.menu_status || "cooking") !== "served")
-                          : [],
-                        combo_details: Array.isArray(o.combo_details)
-                          ? o.combo_details.filter((c) => (c.menu_status || "cooking") !== "served")
-                          : [],
-                      })),
-                      "warning"
-                    )}
-                  </div>
-                </div>
-                <div className="mb-3 md:mb-0">
-                  <h4 className="text-3xl text-white text-center font-bold mb-2 md:mb-3 lg:mb-4 bg-green-800 py-2 md:py-3 flex items-center justify-center rounded-lg">
-                    <span className="text-xl md:text-2xl lg:text-3xl">Pick Up ({servedOrders.length})</span>
-                  </h4>
-                  {/*
-                    For Pick Up: show served items from both servedOrders and cookingOrders
-                  */}
-                  <div className="grid grid-cols-1 gap-2 md:gap-3">
-                    {renderOrders(
-                      // merge cooking and served by order_id, prefer servedOrders base when duplicates
-                      (() => {
-                        const map = new Map();
-                        [...cookingOrders, ...servedOrders].forEach((o) => {
-                          const existing = map.get(o.order_id);
-                          if (!existing || existing.order_status !== "served") {
-                            map.set(o.order_id, o);
-                          }
-                        });
-                        const orders = Array.from(map.values()).map((o) => ({
-                          ...o,
-                          order_status: o.order_status === "served" ? "served" : "cooking",
-                          menu_details: Array.isArray(o.menu_details)
-                            ? o.menu_details.filter((m) => m.menu_status === "served")
-                            : [],
-                          combo_details: Array.isArray(o.combo_details)
-                            ? o.combo_details.filter((c) => c.menu_status === "served")
-                            : [],
-                        }));
-
-                        // Sort by date_time in descending order (latest first)
-                        return orders.sort((a, b) => {
-                          const dateA = new Date(a.date_time || 0).getTime();
-                          const dateB = new Date(b.date_time || 0).getTime();
-                          return dateB - dateA;
-                        });
-                      })(),
-                      "success"
-                    )}
-                  </div>
-                </div>
-                {lastRefreshTime && (
-                  <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center mt-2 text-gray-500 text-xs">Last refreshed at: {lastRefreshTime}</div>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-grow content-start">
+                {getFilteredOrders()}
               </div>
+            )}
+            {lastRefreshTime && (
+              <div className="text-center mt-4 text-gray-500 text-xs">Last refreshed at: {lastRefreshTime}</div>
             )}
           </div>
         </div>
