@@ -518,12 +518,31 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       const fullyServedFromCooking = cookingOrdersFromServer.filter(isOrderFullyServed).map(promoteOrderToServed);
       const remainingCookingOrdersFromServer = cookingOrdersFromServer.filter((o) => !isOrderFullyServed(o));
 
+      // Reverse safeguard: server may keep order_status as "served" even when new
+      // items are added (e.g. from POS update_order). If any item is still cooking,
+      // demote that order back to cooking so kitchen staff can prepare and serve it.
+      const demotedToCookingFromServed = servedOrdersFromServer
+        .filter((o) => !isOrderFullyServed(o))
+        .map((o) => ({
+          ...o,
+          order_status: "cooking",
+          complete_enabled: true,
+          kds_button_enabled: 1,
+        }));
+      const actualServedOrdersFromServer = servedOrdersFromServer.filter(isOrderFullyServed);
+
+      // Clean up local served cache for any demoted orders so they don't persist as served
+      demotedToCookingFromServed.forEach((order) => {
+        removeLocalServedOrder(order.order_id);
+      });
+
       setPlacedOrders(() => [
         ...withoutOptimistic(placedOrdersFromServer),
         ...optimisticByStatus("placed"),
       ]);
       setCookingOrders(() => [
         ...withoutOptimistic(remainingCookingOrdersFromServer),
+        ...withoutOptimistic(demotedToCookingFromServed),
         ...optimisticByStatus("cooking"),
       ]);
       setPaidOrders(() => [
@@ -531,11 +550,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         ...optimisticByStatus("paid"),
       ]);
       setServedOrders(() => {
-        const promotedAndServerServed = [...fullyServedFromCooking, ...servedOrdersFromServer];
+        const promotedAndServerServed = [...fullyServedFromCooking, ...actualServedOrdersFromServer];
         const serverServed = withoutOptimistic(promotedAndServerServed);
         const optimisticServed = optimisticByStatus("served");
 
-        // Ensure all menu items in served orders have menu_status: "served"
+        // Ensure all menu items in fully served orders have menu_status: "served"
         const normalizeServedOrder = (order) => {
           if (order.order_status !== "served") return order;
           return {
@@ -543,13 +562,13 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
             menu_details: Array.isArray(order.menu_details)
               ? order.menu_details.map((m) => ({
                 ...m,
-                menu_status: "served",
+                menu_status: m.menu_status === "cooking" ? "cooking" : "served",
               }))
               : [],
             combo_details: Array.isArray(order.combo_details)
               ? order.combo_details.map((c) => ({
                   ...c,
-                  menu_status: "served",
+                  menu_status: c.menu_status === "cooking" ? "cooking" : "served",
                 }))
               : [],
           };
@@ -578,8 +597,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         // Add locally cached served orders from localStorage (persist them even if server doesn't return them)
         const localServed = getLocalServedOrders();
         Object.values(localServed).forEach((order) => {
-          if (!merged.has(String(order.order_id))) {
-            merged.set(String(order.order_id), order);
+          const strId = String(order.order_id);
+          const isCookingOrder = remainingCookingOrdersFromServer.some((o) => String(o.order_id) === strId)
+            || demotedToCookingFromServed.some((o) => String(o.order_id) === strId);
+          if (!merged.has(strId) && !isCookingOrder) {
+            merged.set(strId, order);
           }
         });
 
@@ -619,7 +641,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
         autoAcceptPlacedOrders(result.placed_orders);
       }
     }
-  }, [canConnectWs, isWsConnected, ordersResponse, queryLoading, queryError, manualMode, onSubscriptionDataChange, autoAcceptPlacedOrders, getLocalServedOrders, saveLocalServedOrder]);
+  }, [canConnectWs, isWsConnected, ordersResponse, queryLoading, queryError, manualMode, onSubscriptionDataChange, autoAcceptPlacedOrders, getLocalServedOrders, saveLocalServedOrder, removeLocalServedOrder]);
 
   // Refetch when the date filter changes. Do not refetch just because the
   // WebSocket connected — enabling the query already loads the list.
@@ -1164,9 +1186,11 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       // Just showing them as placed for display purposes if we don't have a mixed renderer
       // But actually we might need to map them with their actual type.
       return allOrders.map(o => {
+        const hasUnserved = (Array.isArray(o.menu_details) && o.menu_details.some(m => (m.menu_status || "cooking") !== "served"))
+          || (Array.isArray(o.combo_details) && o.combo_details.some(c => (c.menu_status || "cooking") !== "served"));
         let t = "placed";
-        if (o.order_status === "cooking") t = "warning";
-        if (o.order_status === "served") t = "success";
+        if (o.order_status === "cooking" || hasUnserved) t = "warning";
+        else if (o.order_status === "served") t = "success";
         return renderOrders([o], t);
       });
     }
