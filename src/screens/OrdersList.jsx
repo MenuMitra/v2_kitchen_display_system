@@ -986,20 +986,29 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       return orders.map((order) => {
         const prevMenuItems = previousMenuItems[order.order_id] || [];
 
-        // Filter menus per section
+        // In Pick Up (success), only show served items. In warning/placed, keep all items.
         let visibleMenus = Array.isArray(order.menu_details) ? order.menu_details : [];
-        if (type === "warning") {
-          visibleMenus = visibleMenus.filter((m) => (m.menu_status || "cooking") !== "served");
-        } else if (type === "success") {
+        if (type === "success") {
           visibleMenus = visibleMenus.filter((m) => m.menu_status === "served");
         }
+        // Place unserved (about to serve) items on top, and served items at the bottom
+        visibleMenus = [...visibleMenus].sort((a, b) => {
+          const aServed = (a.menu_status || "cooking") === "served";
+          const bServed = (b.menu_status || "cooking") === "served";
+          if (aServed === bServed) return 0;
+          return aServed ? 1 : -1;
+        });
 
         let visibleCombos = Array.isArray(order.combo_details) ? order.combo_details : [];
-        if (type === "warning") {
-          visibleCombos = visibleCombos.filter((c) => (c.menu_status || "cooking") !== "served");
-        } else if (type === "success") {
+        if (type === "success") {
           visibleCombos = visibleCombos.filter((c) => c.menu_status === "served");
         }
+        visibleCombos = [...visibleCombos].sort((a, b) => {
+          const aServed = (a.menu_status || "cooking") === "served";
+          const bServed = (b.menu_status || "cooking") === "served";
+          if (aServed === bServed) return 0;
+          return aServed ? 1 : -1;
+        });
 
         const isPrimaryColumn =
           (type === "placed" && order.order_status === "placed") ||
@@ -1021,14 +1030,14 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-gray-500 font-bold mt-1">
-                  {order.date_time ? new Date(order.date_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ""}
-                </div>
                 {order.section_name && (
                   <div className="text-sm font-bold text-gray-700 mt-1">{order.section_name} {order.table_number?.length ? ` - ${order.table_number.join(", ")}` : ""}</div>
                 )}
               </div>
-              <div className="text-xl font-bold text-gray-800">
+              <div className="flex items-center gap-2">
+                <div className="text-xl font-bold text-gray-800">
+                  {order.date_time ? new Date(order.date_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ""}
+                </div>
                 {manualMode && order.order_status === "placed" && !isSuperOwner ? (
                   <CircularCountdown orderId={order.order_id} order={order} />
                 ) : null}
@@ -1037,12 +1046,13 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
             
             <div className="flex-grow overflow-y-auto pr-1">
               {visibleMenus.map((menu, index) => {
-                const isNewItem = prevMenuItems.length > 0 && !prevMenuItems.includes(menu.menu_name);
+                const isServed = (menu.menu_status || "cooking") === "served";
+                const isNewItem = !isServed && prevMenuItems.length > 0 && !prevMenuItems.includes(menu.menu_name);
                 return (
-                  <div className="flex items-start gap-3 border-b border-gray-300 pb-2 mb-2" key={index}>
+                  <div className={`flex items-start gap-3 border-b border-gray-300 pb-2 mb-2 ${isServed ? "opacity-75" : ""}`} key={index}>
                     <span className="text-gray-500 bg-gray-200 rounded-full px-2 py-0.5 text-xs font-bold mt-1">x{menu.quantity}</span>
                     <div className="flex-grow">
-                      <div className={`font-bold text-lg text-gray-800 ${isNewItem ? "text-red-600" : ""}`}>
+                      <div className={`font-bold text-lg ${isServed ? "text-gray-500" : isNewItem ? "text-red-600" : "text-gray-800"}`}>
                         {menu.menu_name}
                       </div>
                       {(menu.portions_name || menu.comment || menu.half_or_full) && (
@@ -1054,54 +1064,67 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
                       )}
                     </div>
                     {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
-                      <button
-                        className="px-2 py-1 text-xs bg-green-700 text-white rounded shadow hover:bg-green-600"
-                        onClick={() => handleServeMenuItem(order.order_id, menu)}
-                      >
-                        Served
-                      </button>
+                      isServed ? (
+                        <button
+                          disabled
+                          className="px-2 py-1 text-xs bg-gray-400 text-white rounded shadow cursor-not-allowed opacity-80"
+                        >
+                          Served
+                        </button>
+                      ) : (
+                        <button
+                          className="px-2 py-1 text-xs bg-green-700 text-white rounded shadow hover:bg-green-600"
+                          onClick={() => handleServeMenuItem(order.order_id, menu)}
+                        >
+                          Served
+                        </button>
+                      )
                     )}
                   </div>
                 );
               })}
               
               {visibleCombos.map((combo, index) => {
+                const isServed = (combo.menu_status || "cooking") === "served";
                 return (
-                  <div className="flex items-start gap-3 border-b border-gray-300 pb-2 mb-2" key={`combo-${index}`}>
+                  <div className={`flex items-start gap-3 border-b border-gray-300 pb-2 mb-2 ${isServed ? "opacity-75" : ""}`} key={`combo-${index}`}>
                     <span className="text-gray-500 bg-gray-200 rounded-full px-2 py-0.5 text-xs font-bold mt-1">x{combo.quantity}</span>
                     <div className="flex-grow">
-                      <div className="font-bold text-lg text-gray-800">{combo.combo_name}</div>
+                      <div className={`font-bold text-lg ${isServed ? "text-gray-500" : "text-gray-800"}`}>{combo.combo_name}</div>
                       {combo.comment && <div className="text-xs text-gray-500 font-bold mt-1">{combo.comment}</div>}
                     </div>
-                    {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (combo.menu_status || "cooking") !== "served" && (
-                      <button
-                        className="px-2 py-1 text-xs bg-green-700 text-white rounded shadow hover:bg-green-600"
-                        onClick={() => handleServeComboItem(order.order_id, combo)}
-                      >
-                        Served
-                      </button>
+                    {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
+                      isServed ? (
+                        <button
+                          disabled
+                          className="px-2 py-1 text-xs bg-gray-400 text-white rounded shadow cursor-not-allowed opacity-80"
+                        >
+                          Served
+                        </button>
+                      ) : (
+                        <button
+                          className="px-2 py-1 text-xs bg-green-700 text-white rounded shadow hover:bg-green-600"
+                          onClick={() => handleServeComboItem(order.order_id, combo)}
+                        >
+                          Served
+                        </button>
+                      )
                     )}
                   </div>
                 );
               })}
             </div>
             
-            <div className="grid grid-cols-3 gap-2 mt-auto pt-4">
-              {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 ? (
+            {manualMode && type === "warning" && !isSuperOwner && order.kds_button_enabled === 1 && (
+              <div className="mt-auto pt-4">
                 <button 
-                  className="col-span-3 bg-[#242c38] text-white rounded-lg py-2 text-sm font-bold shadow hover:bg-gray-800"
+                  className="w-full bg-[#242c38] text-white rounded-lg py-2 text-sm font-bold shadow hover:bg-gray-800"
                   onClick={() => updateOrderStatus(order.order_id, "served")}
                 >
                   COMPLETE ORDER
                 </button>
-              ) : (
-                <>
-                  <button className="bg-[#242c38] text-white rounded-lg py-2 text-sm font-bold shadow hover:bg-gray-800">QUEUE</button>
-                  <button className="border border-green-700 text-green-700 rounded-lg py-2 text-sm font-bold hover:bg-green-50">PRINT</button>
-                  <button className="border border-green-700 text-green-700 rounded-lg py-2 text-sm font-bold hover:bg-green-50">VIEW</button>
-                </>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         );
       });
@@ -1148,14 +1171,7 @@ const OrdersList = forwardRef(({ outletId, onSubscriptionDataChange }, ref) => {
       });
     }
     if (activeTab === "PLACED") return renderOrders(placedOrders, "placed");
-    if (activeTab === "COOKING") {
-      const filteredCooking = cookingOrders.map((o) => ({
-        ...o,
-        menu_details: Array.isArray(o.menu_details) ? o.menu_details.filter((m) => (m.menu_status || "cooking") !== "served") : [],
-        combo_details: Array.isArray(o.combo_details) ? o.combo_details.filter((c) => (c.menu_status || "cooking") !== "served") : [],
-      }));
-      return renderOrders(filteredCooking, "warning");
-    }
+    if (activeTab === "COOKING") return renderOrders(cookingOrders, "warning");
     if (activeTab === "PICK UP") return renderOrders(mergedPickUp, "success");
     return null;
   };
